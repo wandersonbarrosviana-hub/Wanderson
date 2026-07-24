@@ -36,7 +36,7 @@ async function startServer() {
       let formattedTrades = '';
 
       trades.forEach((t: any, index: number) => {
-        formattedTrades += `Operação ${index + 1}:\nData: ${t.date}, Ativo: ${t.asset}, Entrada: ${t.entryPrice}, Saída: ${t.exitPrice}, Resultado: $${t.resultValue}, Sentimento: ${t.sentiment}, Descrição: ${t.description}, Stop Financeiro Planejado: $${t.initialStopFinancial || 'N/A'}, Alvo Financeiro Planejado: $${t.targetFinancial || 'N/A'}\n\n`;
+        formattedTrades += `Operação ${index + 1}:\nData: ${t.date}, Ativo: ${t.asset}, Entrada: ${t.entryPrice}, Saída: ${t.exitPrice}, Resultado: $${t.resultValue}, Sentimento: ${t.sentiment}, Tendência: ${t.trend || 'N/A'}, Descrição: ${t.description}, Stop Financeiro Planejado: $${t.initialStopFinancial || 'N/A'}, Alvo Financeiro Planejado: $${t.targetFinancial || 'N/A'}\n\n`;
         
         if (t.imageUrl && t.imageUrl.startsWith('data:image')) {
           const mimeType = t.imageUrl.substring(5, t.imageUrl.indexOf(';'));

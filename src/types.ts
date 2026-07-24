@@ -47,6 +47,7 @@ export interface Trade {
   evalEarlyProfit?: boolean;
   initialStopFinancial?: number;
   targetFinancial?: number;
+  trend?: 'a favor' | 'contra' | 'lateralizado';
   imageUrl?: string;
   canvasData?: string; // Serialized Konva data
 }

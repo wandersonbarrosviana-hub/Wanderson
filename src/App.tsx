@@ -44,16 +44,16 @@ export default function App() {
 
       {/* Sidebar / Top Nav */}
       <nav className="bg-white border-b border-slate-200 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center gap-2">
-              <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800">
-                <LogoIcon className="w-6 h-6" />
+        <div className="max-w-[100rem] mx-auto px-2 sm:px-4 lg:px-6">
+          <div className="flex justify-between h-14">
+            <div className="flex items-center gap-2 lg:gap-3">
+              <div className="p-1.5 sm:p-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 shrink-0">
+                <LogoIcon className="w-6 h-6 sm:w-8 sm:h-8" />
               </div>
-              <span className="font-bold text-xl text-slate-800 tracking-tight">TradeDiary</span>
+              <span className="font-bold text-lg sm:text-xl text-slate-800 tracking-tight shrink-0">TradeDiary</span>
             </div>
             
-            <div className="flex items-center gap-1 sm:gap-4">
+            <div className="flex items-center gap-1 sm:gap-3 overflow-x-auto no-scrollbar pl-2">
               <NavButton 
                 active={activeTab === 'dashboard'} 
                 onClick={() => setActiveTab('dashboard')}
@@ -84,11 +84,12 @@ export default function App() {
                 icon={<SettingsIcon size={18} />}
                 label="Configurações"
               />
+
               <div className="w-px h-6 bg-slate-200 mx-2 hidden sm:block"></div>
               
               {user ? (
-                <div className="flex items-center gap-2">
-                  <div className="hidden lg:flex flex-col items-end mr-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="hidden xl:flex flex-col items-end mr-2">
                     <span className="text-xs font-medium text-slate-700">{user.displayName}</span>
                     <span className="text-[10px] text-slate-500">{user.email}</span>
                   </div>
@@ -101,7 +102,7 @@ export default function App() {
                   )}
                   <button
                     onClick={() => signOut()}
-                    className="p-2 text-slate-400 hover:text-red-600 transition-colors"
+                    className="p-2 text-slate-400 hover:text-red-600 transition-colors flex-shrink-0"
                     title="Sair"
                   >
                     <LogOut size={18} />
@@ -110,7 +111,7 @@ export default function App() {
               ) : (
                 <button
                   onClick={() => signIn()}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 rounded-lg transition-colors border border-slate-200 flex-shrink-0"
                 >
                   <LogIn size={18} />
                   <span className="hidden sm:inline">Entrar com Google</span>
@@ -119,10 +120,10 @@ export default function App() {
 
               <button
                 onClick={() => setIsRegisterOpen(true)}
-                className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm"
+                className="flex items-center gap-1.5 bg-blue-600 text-white px-3 py-1.5 text-sm rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm flex-shrink-0 ml-1"
               >
-                <Plus size={18} />
-                <span className="hidden sm:inline">Nova Operação</span>
+                <Plus size={16} />
+                <span className="hidden md:inline whitespace-nowrap">Nova Operação</span>
               </button>
             </div>
           </div>
@@ -130,7 +131,7 @@ export default function App() {
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+      <main className="max-w-[100rem] mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
         {loading && user ? (
           <div className="flex items-center justify-center h-64 text-slate-500 gap-2">
             <Sparkles className="animate-spin" size={24} />

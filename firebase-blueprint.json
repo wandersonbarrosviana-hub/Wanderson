@@ -62,6 +62,7 @@
         "evalEarlyProfit": { "type": "boolean" },
         "initialStopFinancial": { "type": "number" },
         "targetFinancial": { "type": "number" },
+        "trend": { "type": "string" },
         "imageUrl": { "type": "string" },
         "canvasData": { "type": "string" },
         "ownerId": { "type": "string" }

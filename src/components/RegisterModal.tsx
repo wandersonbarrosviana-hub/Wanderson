@@ -25,6 +25,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     direction: initialData?.direction || 'Compra',
     quantity: initialData?.quantity?.toString() || '',
     strategy: initialData?.strategy || '',
+    trend: initialData?.trend || '',
     entryPrice: initialData?.entryPrice?.toString() || '',
     initialStopPrice: initialData?.initialStopPrice?.toString() || '',
     targetPrice: initialData?.targetPrice?.toString() || '',
@@ -88,6 +89,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
       direction: formData.direction as any,
       quantity: formData.quantity ? Number(formData.quantity) : undefined,
       strategy: formData.strategy,
+      trend: formData.trend as any,
       entryPrice: Number(formData.entryPrice),
       initialStopPrice: Number(formData.initialStopPrice),
       targetPrice: Number(formData.targetPrice),
@@ -159,7 +161,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Direção</label>
                 <select required name="direction" value={formData.direction} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
@@ -174,6 +176,15 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Qtd (Contratos/Ações)</label>
                 <input type="number" step="0.01" name="quantity" value={formData.quantity} onChange={handleChange} placeholder="ex: 1 ou 100" className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Tendência</label>
+                <select name="trend" value={formData.trend} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">Selecione</option>
+                  <option value="a favor">A favor</option>
+                  <option value="contra">Contra</option>
+                  <option value="lateralizado">Lateralizado</option>
+                </select>
               </div>
             </div>
 

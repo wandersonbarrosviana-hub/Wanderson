@@ -25,7 +25,9 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
   const [selectedSentiment, setSelectedSentiment] = useState<string>('all');
   const [selectedResultType, setSelectedResultType] = useState<string>('all');
   const [selectedAsset, setSelectedAsset] = useState<string>('all');
+  const [selectedTrend, setSelectedTrend] = useState<string>('all');
   const [viewTrade, setViewTrade] = useState<Trade | null>(null);
+  const [isChartHovered, setIsChartHovered] = useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
 
   useEffect(() => {
@@ -67,8 +69,11 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     if (selectedAsset !== 'all') {
       filtered = filtered.filter(t => t.asset === selectedAsset);
     }
+    if (selectedTrend !== 'all') {
+      filtered = filtered.filter(t => t.trend === selectedTrend);
+    }
     return filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [trades, startDate, endDate, selectedAccountId, accounts, selectedStrategy, selectedSentiment, selectedResultType, selectedAsset]);
+  }, [trades, startDate, endDate, selectedAccountId, accounts, selectedStrategy, selectedSentiment, selectedResultType, selectedAsset, selectedTrend]);
 
   const uniqueStrategies = useMemo(() => {
     const strategies = new Set<string>();
@@ -243,6 +248,34 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     return data;
   }, [filteredTrades, activeInitialBalance]);
 
+  const consistencyScore = useMemo(() => {
+    if (chartData.length < 2) return 0;
+    
+    const n = chartData.length;
+    let sumX = 0;
+    let sumY = 0;
+    let sumXY = 0;
+    let sumX2 = 0;
+    let sumY2 = 0;
+
+    chartData.forEach((d, i) => {
+      const x = i;
+      const y = d.cumulative;
+      sumX += x;
+      sumY += y;
+      sumXY += x * y;
+      sumX2 += x * x;
+      sumY2 += y * y;
+    });
+
+    const numerator = Math.pow((n * sumXY - sumX * sumY), 2);
+    const denominator = (n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY);
+    
+    if (denominator === 0) return 1;
+    
+    return numerator / denominator;
+  }, [chartData]);
+
   const barChartData = useMemo(() => {
     return chronologicalTrades.map((t, index) => ({
       name: `Op ${index + 1}`,
@@ -273,8 +306,9 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     let compraCount = 0;
     let vendaCount = 0;
     filteredTrades.forEach(t => {
-      if (t.direction === 'Compra') compraCount++;
-      else if (t.direction === 'Venda') vendaCount++;
+      const dir = t.direction || 'Compra';
+      if (dir === 'Compra') compraCount++;
+      else if (dir === 'Venda') vendaCount++;
     });
     return [
       { name: 'Compra', value: compraCount, color: '#0ea5e9' },
@@ -527,8 +561,21 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
             <option value="0x0">0x0</option>
           </select>
         </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-slate-700">Tendência:</label>
+          <select
+            value={selectedTrend}
+            onChange={e => setSelectedTrend(e.target.value)}
+            className="rounded-md border border-slate-300 p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none max-w-[120px]"
+          >
+            <option value="all">Todas</option>
+            <option value="a favor">A favor</option>
+            <option value="contra">Contra</option>
+            <option value="lateralizado">Lateralizado</option>
+          </select>
+        </div>
         <button 
-          onClick={() => { setStartDate(''); setEndDate(''); setSelectedAccountId('all'); setSelectedStrategy('all'); setSelectedSentiment('all'); setSelectedResultType('all'); }}
+          onClick={() => { setStartDate(''); setEndDate(''); setSelectedAccountId('all'); setSelectedStrategy('all'); setSelectedSentiment('all'); setSelectedResultType('all'); setSelectedAsset('all'); setSelectedTrend('all'); }}
           className="text-sm text-blue-600 hover:text-blue-800 ml-auto"
         >
           Limpar Filtros
@@ -536,12 +583,13 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard title="Patrimônio Atual" value={activeInitialBalance + stats.netResult} icon={<DollarSign size={20} />} isCurrency />
         <StatCard title="Lucro/Prejuízo (%)" value={stats.roi} suffix="%" icon={<Percent size={20} />} valueColor={stats.roi >= 0 ? 'text-emerald-600' : 'text-red-600'} />
         <StatCard title="Resultado Líquido" value={stats.netResult} icon={<DollarSign size={20} />} isCurrency />
         <StatCard title="Win Rate" value={stats.winRate} suffix="%" icon={<Target size={20} />} />
         <StatCard title="Total Operações" value={stats.totalTrades} icon={<Activity size={20} />} />
+        <StatCard title="Score Consistência" value={consistencyScore * 100} suffix="%" icon={<Target size={20} />} valueColor={consistencyScore >= 0.8 ? 'text-emerald-600' : consistencyScore >= 0.5 ? 'text-orange-500' : 'text-red-600'} />
       </div>
 
       {/* Risk Management Cards */}
@@ -661,7 +709,11 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
       {/* Chart */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 [&_.recharts-wrapper]:outline-none [&_.recharts-surface]:outline-none [&_path]:outline-none [&_rect]:outline-none">
         <h3 className="text-lg font-semibold text-slate-800 mb-6">Evolução do Patrimônio (Acumulado)</h3>
-        <div className="h-[400px] w-full">
+        <div 
+          className="h-[400px] w-full"
+          onMouseEnter={() => setIsChartHovered(true)}
+          onMouseLeave={() => setIsChartHovered(false)}
+        >
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
@@ -679,9 +731,17 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
                 />
                 <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
                 <defs>
+                  <filter id="waveFilter" x="-20%" y="-20%" width="140%" height="140%">
+                    <feTurbulence type="fractalNoise" baseFrequency={isChartHovered ? "0.01 0.03" : "0.005 0.01"} numOctaves="1" result="noise">
+                      <animate attributeName="baseFrequency" values={isChartHovered ? "0.01 0.03; 0.015 0.05; 0.01 0.03" : "0.005 0.01; 0.008 0.02; 0.005 0.01"} dur={isChartHovered ? "4s" : "10s"} repeatCount="indefinite" />
+                    </feTurbulence>
+                    <feDisplacementMap in="SourceGraphic" in2="noise" scale={isChartHovered ? "8" : "2"} xChannelSelector="R" yChannelSelector="G">
+                      <animate attributeName="scale" values={isChartHovered ? "4; 12; 4" : "1; 4; 1"} dur={isChartHovered ? "4s" : "10s"} repeatCount="indefinite" />
+                    </feDisplacementMap>
+                  </filter>
                   <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset={off} stopColor="#00f260" stopOpacity={0.3} />
-                    <stop offset={off} stopColor="#ff0844" stopOpacity={0.3} />
+                    <stop offset={off} stopColor="#00f260" stopOpacity={0.6} />
+                    <stop offset={off} stopColor="#ff0844" stopOpacity={0.6} />
                   </linearGradient>
                   <linearGradient id="splitColorStroke" x1="0" y1="0" x2="0" y2="1">
                     <stop offset={off} stopColor="#00f260" stopOpacity={1} />
@@ -689,11 +749,23 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
                   </linearGradient>
                 </defs>
                 <Area 
-                  type="monotone" 
+                  type="natural" 
+                  dataKey="cumulative" 
+                  stroke="none" 
+                  fill="url(#splitColor)" 
+                  style={{ filter: 'url(#waveFilter)' }}
+                  animationDuration={2500}
+                  animationEasing="ease-in-out"
+                  activeDot={false}
+                />
+                <Area 
+                  type="natural" 
                   dataKey="cumulative" 
                   stroke="url(#splitColorStroke)" 
-                  fill="url(#splitColor)" 
+                  fill="none" 
                   strokeWidth={3}
+                  animationDuration={2500}
+                  animationEasing="ease-in-out"
                   activeDot={{ r: 6, fill: '#0ea5e9', stroke: '#fff', strokeWidth: 2 }}
                 />
               </AreaChart>

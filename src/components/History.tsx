@@ -31,6 +31,7 @@ export function History({ trades, onDelete, onUpdate }: HistoryProps) {
               <th className="p-4 font-medium border-b border-slate-200">Data</th>
               <th className="p-4 font-medium border-b border-slate-200">Ativo</th>
               <th className="p-4 font-medium border-b border-slate-200">Direção</th>
+              <th className="p-4 font-medium border-b border-slate-200">Tendência</th>
               <th className="p-4 font-medium border-b border-slate-200">Estratégia</th>
               <th className="p-4 font-medium border-b border-slate-200">Resultado</th>
               <th className="p-4 font-medium border-b border-slate-200">Valor</th>
@@ -60,6 +61,7 @@ export function History({ trades, onDelete, onUpdate }: HistoryProps) {
                       {trade.direction || 'Compra'}
                     </span>
                   </td>
+                  <td className="p-4 text-sm text-slate-600 capitalize">{trade.trend || '-'}</td>
                   <td className="p-4 text-sm text-slate-600">{trade.strategy || '-'}</td>
                   <td className="p-4 text-sm">
                     <span className={cn(
