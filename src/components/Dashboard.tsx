@@ -156,7 +156,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
   }, [filteredTrades, activeInitialBalance]);
 
   const riskStats = useMemo(() => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = format(new Date(), 'yyyy-MM-dd');
     const dailyTrades = trades.filter(t => t.date.startsWith(today));
     
     const dailyLoss = dailyTrades
@@ -176,6 +176,40 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     };
   }, [trades]);
 
+  const chronologicalTrades = useMemo(() => {
+    return [...filteredTrades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [filteredTrades]);
+
+  const drawdownStats = useMemo(() => {
+    let currentBalance = activeInitialBalance;
+    let peak = activeInitialBalance;
+    let maxDrawdownValue = 0;
+    let maxDrawdownPercent = 0;
+    
+    chronologicalTrades.forEach(t => {
+      currentBalance += t.resultValue;
+      if (currentBalance > peak) {
+        peak = currentBalance;
+      }
+      
+      const currentDrawdownValue = peak - currentBalance;
+      const currentDrawdownPercent = peak > 0 ? (currentDrawdownValue / peak) * 100 : 0;
+      
+      if (currentDrawdownValue > maxDrawdownValue) maxDrawdownValue = currentDrawdownValue;
+      if (currentDrawdownPercent > maxDrawdownPercent) maxDrawdownPercent = currentDrawdownPercent;
+    });
+
+    const currentDrawdownValue = peak - currentBalance;
+    const currentDrawdownPercent = peak > 0 ? (currentDrawdownValue / peak) * 100 : 0;
+
+    return {
+      currentDrawdownValue,
+      currentDrawdownPercent,
+      maxDrawdownValue,
+      maxDrawdownPercent
+    };
+  }, [chronologicalTrades, activeInitialBalance]);
+
   const chartData = useMemo(() => {
     let cumulative = activeInitialBalance;
     const data: any[] = [{
@@ -185,7 +219,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
       cumulative: activeInitialBalance
     }];
 
-    const aggregated = filteredTrades.reduce((acc, t) => {
+    const aggregated = chronologicalTrades.reduce((acc, t) => {
       const dateStr = format(parseISO(t.date), 'dd/MM', { locale: ptBR });
       if (!acc[dateStr]) {
         acc[dateStr] = {
@@ -210,14 +244,14 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
   }, [filteredTrades, activeInitialBalance]);
 
   const barChartData = useMemo(() => {
-    return filteredTrades.map((t, index) => ({
+    return chronologicalTrades.map((t, index) => ({
       name: `Op ${index + 1}`,
       date: format(parseISO(t.date), 'dd MMM yyyy', { locale: ptBR }),
       asset: t.asset,
       value: t.resultValue,
       originalTrade: t,
     }));
-  }, [filteredTrades]);
+  }, [chronologicalTrades]);
 
   const CustomBarTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -394,8 +428,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
         <div className="flex items-center gap-2 ml-2 border-l border-slate-200 pl-4">
           <button
             onClick={() => {
-              const now = new Date();
-              const dateStr = now.toISOString().split('T')[0];
+              const dateStr = format(new Date(), 'yyyy-MM-dd');
               setStartDate(dateStr);
               setEndDate(dateStr);
             }}
@@ -557,7 +590,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
 
         {settings.maxTradesPerDay ? (
           <StatCard 
-            title="Operações Realizadas" 
+            title="Operações Hoje" 
             value={riskStats.tradeCount} 
             icon={<ListChecks size={20} />} 
             valueColor={
@@ -575,17 +608,18 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
           </div>
         )}
       </div>
-
+      
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard title="Total Loss" value={stats.totalLoss} icon={<TrendingDown size={20} />} isCurrency valueColor="text-red-600" />
         <StatCard title="Maior Gain" value={stats.maxGain} icon={<TrendingUp size={20} />} isCurrency valueColor="text-emerald-600" />
         <StatCard title="Maior Loss" value={stats.maxLoss} icon={<TrendingDown size={20} />} isCurrency valueColor="text-red-600" />
         <StatCard title="Média Gain" value={stats.avgGain} icon={<Activity size={20} />} isCurrency valueColor="text-emerald-600" />
-        
         <StatCard title="Média Loss" value={stats.avgLoss} icon={<Activity size={20} />} isCurrency valueColor="text-red-600" />
         <StatCard title="Risco/Retorno (Médio)" value={stats.avgRiskReward > 0 ? `1:${stats.avgRiskReward.toFixed(2)}` : '-'} icon={<Activity size={20} />} isStringValue />
         <StatCard title="Seq. Gains (Máx)" value={stats.maxConsecutiveGains} icon={<TrendingUp size={20} />} valueColor="text-emerald-600" />
         <StatCard title="Seq. Loss (Máx)" value={stats.maxConsecutiveLosses} icon={<TrendingDown size={20} />} valueColor="text-red-600" />
+        <StatCard title="Drawdown Atual" value={drawdownStats.currentDrawdownValue} suffix={` (${drawdownStats.currentDrawdownPercent.toFixed(1)}%)`} icon={<TrendingDown size={20} />} isCurrency valueColor="text-red-600" />
+        <StatCard title="Drawdown Máximo" value={drawdownStats.maxDrawdownValue} suffix={` (${drawdownStats.maxDrawdownPercent.toFixed(1)}%)`} icon={<TrendingDown size={20} />} isCurrency valueColor="text-red-600" />
       </div>
 
       {/* Strategy Ranking Table */}
@@ -637,7 +671,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} dy={10} />
-                <YAxis domain={['dataMin', 'dataMax']} tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(val) => `$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                <YAxis width={95} domain={['dataMin', 'dataMax']} tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(val) => `$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
                 <Tooltip 
                   contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
                   formatter={(value: number) => [`$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Acumulado']}
@@ -691,7 +725,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} dy={10} />
-                <YAxis tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(val) => `$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                <YAxis width={95} tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(val) => `$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
                 <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
                 <ReferenceLine y={0} stroke="#94a3b8" />
                 <Bar 
