@@ -110,6 +110,9 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     let maxConsecutiveGains = 0;
     let currentConsecutiveLosses = 0;
     let maxConsecutiveLosses = 0;
+    
+    let totalRR = 0;
+    let rrCount = 0;
 
     filteredTrades.forEach(t => {
       if (t.resultValue > 0) {
@@ -129,11 +132,25 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
         currentConsecutiveGains = 0;
         currentConsecutiveLosses = 0;
       }
+      
+      const entry = Number(t.entryPrice);
+      const stop = Number(t.initialStopPrice);
+      const target = Number(t.targetPrice);
+      if (entry && stop && target && entry !== stop) {
+        const risk = Math.abs(entry - stop);
+        const reward = Math.abs(target - entry);
+        if (risk > 0) {
+          totalRR += reward / risk;
+          rrCount++;
+        }
+      }
     });
+
+    const avgRiskReward = rrCount > 0 ? totalRR / rrCount : 0;
 
     const roi = activeInitialBalance > 0 ? (netResult / activeInitialBalance) * 100 : 0;
 
-    return { totalGains, totalLoss, netResult, maxGain, maxLoss, avgGain, avgLoss, winRate: filteredTrades.length ? (gains.length / filteredTrades.length) * 100 : 0, roi, totalTrades: filteredTrades.length, maxConsecutiveGains, maxConsecutiveLosses };
+    return { totalGains, totalLoss, netResult, maxGain, maxLoss, avgGain, avgLoss, winRate: filteredTrades.length ? (gains.length / filteredTrades.length) * 100 : 0, roi, totalTrades: filteredTrades.length, maxConsecutiveGains, maxConsecutiveLosses, avgRiskReward };
   }, [filteredTrades, activeInitialBalance]);
 
   const chartData = useMemo(() => {
@@ -295,6 +312,25 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     setViewTrade(null);
   };
 
+  const strategyRanking = useMemo(() => {
+    const ranking: Record<string, { netResult: number; winCount: number; totalCount: number }> = {};
+    filteredTrades.forEach(t => {
+      if (!t.strategy) return;
+      if (!ranking[t.strategy]) {
+        ranking[t.strategy] = { netResult: 0, winCount: 0, totalCount: 0 };
+      }
+      ranking[t.strategy].totalCount++;
+      ranking[t.strategy].netResult += t.resultValue;
+      if (t.resultValue > 0) {
+        ranking[t.strategy].winCount++;
+      }
+    });
+
+    return Object.entries(ranking)
+      .map(([name, data]) => ({ name, ...data }))
+      .sort((a, b) => b.netResult - a.netResult);
+  }, [filteredTrades]);
+
   const off = chartData.length > 0 ? gradientOffset() : 0;
 
   return (
@@ -447,9 +483,46 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
         <StatCard title="Média Gain" value={stats.avgGain} icon={<Activity size={20} />} isCurrency valueColor="text-emerald-600" />
         
         <StatCard title="Média Loss" value={stats.avgLoss} icon={<Activity size={20} />} isCurrency valueColor="text-red-600" />
+        <StatCard title="Risco/Retorno (Médio)" value={stats.avgRiskReward > 0 ? `1:${stats.avgRiskReward.toFixed(2)}` : '-'} icon={<Activity size={20} />} isStringValue />
         <StatCard title="Seq. Gains (Máx)" value={stats.maxConsecutiveGains} icon={<TrendingUp size={20} />} valueColor="text-emerald-600" />
         <StatCard title="Seq. Loss (Máx)" value={stats.maxConsecutiveLosses} icon={<TrendingDown size={20} />} valueColor="text-red-600" />
       </div>
+
+      {/* Strategy Ranking Table */}
+      {strategyRanking.length > 0 && (
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-6">
+          <h3 className="text-lg font-semibold text-slate-800 mb-6">Ranking de Setups / Estratégias</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Estratégia</th>
+                  <th className="px-4 py-3 font-medium">Operações</th>
+                  <th className="px-4 py-3 font-medium">Vitórias</th>
+                  <th className="px-4 py-3 font-medium">Win Rate</th>
+                  <th className="px-4 py-3 font-medium">Resultado Líquido ($)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {strategyRanking.map((strategy, index) => {
+                  const winRate = strategy.totalCount > 0 ? (strategy.winCount / strategy.totalCount) * 100 : 0;
+                  return (
+                    <tr key={index} className="border-b border-slate-100 hover:bg-slate-50/50">
+                      <td className="px-4 py-3 font-medium text-slate-800">{strategy.name}</td>
+                      <td className="px-4 py-3 text-slate-600">{strategy.totalCount}</td>
+                      <td className="px-4 py-3 text-emerald-600">{strategy.winCount}</td>
+                      <td className="px-4 py-3 text-slate-600">{winRate.toFixed(1)}%</td>
+                      <td className={`px-4 py-3 font-semibold ${strategy.netResult >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                        {strategy.netResult >= 0 ? '+' : ''}$ {strategy.netResult.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Chart */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 [&_.recharts-wrapper]:outline-none [&_.recharts-surface]:outline-none [&_path]:outline-none [&_rect]:outline-none">
@@ -735,13 +808,18 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
   );
 }
 
-function StatCard({ title, value, icon, isCurrency = false, suffix = '', valueColor }: any) {
-  const formattedValue = isCurrency 
-    ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })
-    : value.toFixed(2);
+function StatCard({ title, value, icon, isCurrency = false, suffix = '', valueColor, isStringValue = false }: any) {
+  let formattedValue = '';
+  if (isStringValue) {
+    formattedValue = value;
+  } else {
+    formattedValue = isCurrency 
+      ? value.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })
+      : value.toFixed(2);
+  }
     
   let color = valueColor || 'text-slate-800';
-  if (!valueColor && isCurrency) {
+  if (!valueColor && isCurrency && !isStringValue) {
     if (value > 0) color = 'text-emerald-600';
     if (value < 0) color = 'text-red-600';
   }

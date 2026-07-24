@@ -52,6 +52,19 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
   const [imageUrl, setImageUrl] = useState<string>(initialData?.imageUrl || '');
   const [canvasData, setCanvasData] = useState<string>(initialData?.canvasData || '[]');
 
+  const riskRewardRatio = React.useMemo(() => {
+    const entry = Number(formData.entryPrice);
+    const stop = Number(formData.initialStopPrice);
+    const target = Number(formData.targetPrice);
+    
+    if (entry && stop && target && entry !== stop) {
+      const risk = Math.abs(entry - stop);
+      const reward = Math.abs(target - entry);
+      return (reward / risk).toFixed(2);
+    }
+    return '-';
+  }, [formData.entryPrice, formData.initialStopPrice, formData.targetPrice]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
@@ -144,7 +157,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Preço Entrada</label>
                 <input required type="number" step="0.00001" name="entryPrice" value={formData.entryPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
@@ -156,6 +169,10 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Preço Alvo</label>
                 <input required type="number" step="0.00001" name="targetPrice" value={formData.targetPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Risco/Retorno</label>
+                <input type="text" readOnly value={riskRewardRatio !== '-' ? `1:${riskRewardRatio}` : '-'} className="w-full rounded-md border border-slate-200 bg-slate-50 p-2 text-sm text-slate-500 outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Preço Saída</label>
