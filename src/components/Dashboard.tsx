@@ -1,12 +1,14 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Trade, Account } from '../types';
-import { getSettings } from '../store';
+import { useTradeSync } from '../hooks/useTradeSync';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar, Cell, PieChart, Pie, Legend } from 'recharts';
 import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMonth, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { TrendingUp, TrendingDown, DollarSign, Activity, Target, Percent, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { RegisterModal } from './RegisterModal';
+
+import { Shield, AlertTriangle, ListChecks, TrendingDown } from 'lucide-react';
 
 interface DashboardProps {
   trades: Trade[];
@@ -16,6 +18,7 @@ interface DashboardProps {
 export function Dashboard({ trades, onUpdate }: DashboardProps) {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const { settings } = useTradeSync();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [selectedStrategy, setSelectedStrategy] = useState<string>('all');
@@ -26,9 +29,8 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
 
   useEffect(() => {
-    const settings = getSettings();
     setAccounts(settings.accounts || []);
-  }, []);
+  }, [settings]);
 
   const activeInitialBalance = useMemo(() => {
     if (selectedAccountId === 'all') {
@@ -152,6 +154,27 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
 
     return { totalGains, totalLoss, netResult, maxGain, maxLoss, avgGain, avgLoss, winRate: filteredTrades.length ? (gains.length / filteredTrades.length) * 100 : 0, roi, totalTrades: filteredTrades.length, maxConsecutiveGains, maxConsecutiveLosses, avgRiskReward };
   }, [filteredTrades, activeInitialBalance]);
+
+  const riskStats = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    const dailyTrades = trades.filter(t => t.date.startsWith(today));
+    
+    const dailyLoss = dailyTrades
+      .filter(t => t.resultValue < 0)
+      .reduce((acc, t) => acc + Math.abs(t.resultValue), 0);
+    
+    const maxDailyTradeLoss = dailyTrades.length > 0 
+      ? Math.max(...dailyTrades.map(t => t.resultValue < 0 ? Math.abs(t.resultValue) : 0))
+      : 0;
+
+    const tradeCount = dailyTrades.length;
+
+    return {
+      dailyLoss,
+      maxDailyTradeLoss,
+      tradeCount
+    };
+  }, [trades]);
 
   const chartData = useMemo(() => {
     let cumulative = activeInitialBalance;
@@ -486,8 +509,74 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
         <StatCard title="Resultado Líquido" value={stats.netResult} icon={<DollarSign size={20} />} isCurrency />
         <StatCard title="Win Rate" value={stats.winRate} suffix="%" icon={<Target size={20} />} />
         <StatCard title="Total Operações" value={stats.totalTrades} icon={<Activity size={20} />} />
-        
-        <StatCard title="Total Gains" value={stats.totalGains} icon={<TrendingUp size={20} />} isCurrency valueColor="text-emerald-600" />
+      </div>
+
+      {/* Risk Management Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {settings.dailyRiskLimit ? (
+          <StatCard 
+            title="Risco Diário (Loss Hoje)" 
+            value={riskStats.dailyLoss} 
+            isCurrency 
+            icon={<Shield size={20} />} 
+            valueColor={
+              riskStats.dailyLoss > settings.dailyRiskLimit 
+                ? 'text-red-600' 
+                : riskStats.dailyLoss >= settings.dailyRiskLimit * 0.8 
+                  ? 'text-orange-500' 
+                  : 'text-emerald-600'
+            }
+            suffix={` / $${settings.dailyRiskLimit}`}
+          />
+        ) : (
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
+            <p className="text-xs text-slate-400">Configure o limite de risco diário nas configurações.</p>
+          </div>
+        )}
+
+        {settings.riskPerTradeLimit ? (
+          <StatCard 
+            title="Maior Stop do Dia" 
+            value={riskStats.maxDailyTradeLoss} 
+            isCurrency 
+            icon={<TrendingDown size={20} />} 
+            valueColor={
+              riskStats.maxDailyTradeLoss > settings.riskPerTradeLimit 
+                ? 'text-red-600' 
+                : riskStats.maxDailyTradeLoss >= settings.riskPerTradeLimit * 0.8 
+                  ? 'text-orange-500' 
+                  : 'text-emerald-600'
+            }
+            suffix={` / $${settings.riskPerTradeLimit}`}
+          />
+        ) : (
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
+            <p className="text-xs text-slate-400">Configure o risco por operação nas configurações.</p>
+          </div>
+        )}
+
+        {settings.maxTradesPerDay ? (
+          <StatCard 
+            title="Operações Realizadas" 
+            value={riskStats.tradeCount} 
+            icon={<ListChecks size={20} />} 
+            valueColor={
+              riskStats.tradeCount > settings.maxTradesPerDay 
+                ? 'text-red-600' 
+                : riskStats.tradeCount >= settings.maxTradesPerDay 
+                  ? 'text-orange-500' 
+                  : 'text-slate-800'
+            }
+            suffix={` / ${settings.maxTradesPerDay}`}
+          />
+        ) : (
+          <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
+            <p className="text-xs text-slate-400">Configure o limite de operações nas configurações.</p>
+          </div>
+        )}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard title="Total Loss" value={stats.totalLoss} icon={<TrendingDown size={20} />} isCurrency valueColor="text-red-600" />
         <StatCard title="Maior Gain" value={stats.maxGain} icon={<TrendingUp size={20} />} isCurrency valueColor="text-emerald-600" />
         <StatCard title="Maior Loss" value={stats.maxLoss} icon={<TrendingDown size={20} />} isCurrency valueColor="text-red-600" />

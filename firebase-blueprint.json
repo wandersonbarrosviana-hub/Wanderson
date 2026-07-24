@@ -1,0 +1,82 @@
+{
+  "entities": {
+    "Account": {
+      "title": "Account",
+      "description": "Trading account information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "initialBalance": { "type": "number" }
+      },
+      "required": ["id", "name", "initialBalance"]
+    },
+    "AppSettings": {
+      "title": "AppSettings",
+      "description": "User specific application settings",
+      "type": "object",
+      "properties": {
+        "initialBalance": { "type": "number" },
+        "accounts": {
+          "type": "array",
+          "items": { "$ref": "#/entities/Account" }
+        },
+        "dailyRiskLimit": { "type": "number" },
+        "riskPerTradeLimit": { "type": "number" },
+        "maxTradesPerDay": { "type": "number" }
+      },
+      "required": ["accounts"]
+    },
+    "Trade": {
+      "title": "Trade",
+      "description": "Individual trade record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "accountId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "asset": { "type": "string" },
+        "direction": { "type": "string", "enum": ["Compra", "Venda"] },
+        "strategy": { "type": "string" },
+        "entryPrice": { "type": "number" },
+        "initialStopPrice": { "type": "number" },
+        "targetPrice": { "type": "number" },
+        "exitPrice": { "type": "number" },
+        "resultType": { "type": "string", "enum": ["Gain", "Loss", "0x0"] },
+        "sentiment": { "type": "string" },
+        "isPartial": { "type": "boolean" },
+        "partialRationale": { "type": "string" },
+        "description": { "type": "string" },
+        "resultValue": { "type": "number" },
+        "quantity": { "type": "number" },
+        "ratingEntryQuality": { "type": "number" },
+        "ratingDiscipline": { "type": "number" },
+        "ratingExecution": { "type": "number" },
+        "ratingManagement": { "type": "number" },
+        "ratingEmotionalControl": { "type": "number" },
+        "timeframe": { "type": "string" },
+        "evalFollowedPlan": { "type": "boolean" },
+        "evalRespectedSetup": { "type": "boolean" },
+        "evalImpulseEntry": { "type": "boolean" },
+        "evalMovedStop": { "type": "boolean" },
+        "evalEarlyProfit": { "type": "boolean" },
+        "initialStopFinancial": { "type": "number" },
+        "targetFinancial": { "type": "number" },
+        "imageUrl": { "type": "string" },
+        "canvasData": { "type": "string" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["id", "date", "asset", "entryPrice", "initialStopPrice", "targetPrice", "exitPrice", "resultType", "resultValue"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "AppSettings",
+      "description": "User application settings"
+    },
+    "/users/{userId}/trades/{tradeId}": {
+      "schema": "Trade",
+      "description": "Individual trade records for a user"
+    }
+  }
+}

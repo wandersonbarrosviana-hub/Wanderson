@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import { Trade } from '../types';
 import { Sparkles, Loader2, AlertCircle } from 'lucide-react';
 
+import { useTradeSync } from '../hooks/useTradeSync';
+
 interface AIAnalysisProps {
   trades: Trade[];
 }
 
 export function AIAnalysis({ trades }: AIAnalysisProps) {
+  const { settings } = useTradeSync();
   const [analysis, setAnalysis] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -24,7 +27,14 @@ export function AIAnalysis({ trades }: AIAnalysisProps) {
       const response = await fetch('/api/analyze-trades', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trades }),
+        body: JSON.stringify({ 
+          trades,
+          riskSettings: {
+            dailyRiskLimit: settings.dailyRiskLimit,
+            riskPerTradeLimit: settings.riskPerTradeLimit,
+            maxTradesPerDay: settings.maxTradesPerDay
+          }
+        }),
       });
 
       const data = await response.json();

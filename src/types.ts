@@ -9,6 +9,9 @@ export interface Account {
 export interface AppSettings {
   initialBalance: number; // Legacy, kept for backward compatibility
   accounts: Account[];
+  dailyRiskLimit?: number;
+  riskPerTradeLimit?: number;
+  maxTradesPerDay?: number;
 }
 
 export type TradeDirection = 'Compra' | 'Venda';
@@ -42,6 +45,8 @@ export interface Trade {
   evalImpulseEntry?: boolean;
   evalMovedStop?: boolean;
   evalEarlyProfit?: boolean;
+  initialStopFinancial?: number;
+  targetFinancial?: number;
   imageUrl?: string;
   canvasData?: string; // Serialized Konva data
 }

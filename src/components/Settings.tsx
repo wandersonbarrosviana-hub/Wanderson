@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { getSettings, saveSettings } from '../store';
+import { useTradeSync } from '../hooks/useTradeSync';
 import { AppSettings, Account } from '../types';
 import { Save, CheckCircle2, Plus, Trash2 } from 'lucide-react';
 
 export function Settings() {
-  const [settings, setSettings] = useState<AppSettings>({ initialBalance: 0, accounts: [] });
+  const { settings: syncedSettings, updateSettings } = useTradeSync();
+  const [settings, setSettings] = useState<AppSettings>(syncedSettings);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setSettings(getSettings());
-  }, []);
+    setSettings(syncedSettings);
+  }, [syncedSettings]);
 
   const handleAddAccount = () => {
     const newAccount: Account = {
@@ -46,8 +47,8 @@ export function Settings() {
     setSaved(false);
   };
 
-  const handleSave = () => {
-    saveSettings(settings);
+  const handleSave = async () => {
+    await updateSettings(settings);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -67,7 +68,7 @@ export function Settings() {
           Nova Conta
         </button>
       </div>
-      <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6">
         <div className="space-y-4">
           {settings.accounts.map((account) => (
             <div key={account.id} className="flex items-end gap-4 p-4 border border-slate-100 bg-slate-50 rounded-lg">
@@ -100,6 +101,52 @@ export function Settings() {
               </button>
             </div>
           ))}
+        </div>
+
+        {/* Risk Management Section */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h2 className="text-lg font-semibold text-slate-800 mb-4">Gerenciamento de Risco</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Risco Diário Máximo ($)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-2 text-slate-400 text-sm">$</span>
+                <input 
+                  type="number" 
+                  value={settings.dailyRiskLimit || ''} 
+                  onChange={e => setSettings({ ...settings, dailyRiskLimit: Number(e.target.value) })}
+                  className="w-full pl-7 rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Ex: 100"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">Limite de perda total no dia.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Risco por Operação ($)</label>
+              <div className="relative">
+                <span className="absolute left-3 top-2 text-slate-400 text-sm">$</span>
+                <input 
+                  type="number" 
+                  value={settings.riskPerTradeLimit || ''} 
+                  onChange={e => setSettings({ ...settings, riskPerTradeLimit: Number(e.target.value) })}
+                  className="w-full pl-7 rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Ex: 20"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">Stop máximo financeiro aceitável por trade.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Qtd Operações por Dia</label>
+              <input 
+                type="number" 
+                value={settings.maxTradesPerDay || ''} 
+                onChange={e => setSettings({ ...settings, maxTradesPerDay: Number(e.target.value) })}
+                className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                placeholder="Ex: 5"
+              />
+              <p className="text-[10px] text-slate-400 mt-1">Número máximo de entradas planejadas.</p>
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-4 pt-4 border-t border-slate-100">

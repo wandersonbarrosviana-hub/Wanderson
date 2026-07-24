@@ -8,7 +8,7 @@ dotenv.config();
 
 async function startServer() {
   const app = express();
-  const PORT = process.env.PORT || 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // Middleware to parse JSON
   app.use(express.json({ limit: '50mb' }));
@@ -16,7 +16,7 @@ async function startServer() {
   // API Routes
   app.post("/api/analyze-trades", async (req, res) => {
     try {
-      const { trades, isReport } = req.body;
+      const { trades, isReport, riskSettings } = req.body;
       
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
@@ -36,7 +36,7 @@ async function startServer() {
       let formattedTrades = '';
 
       trades.forEach((t: any, index: number) => {
-        formattedTrades += `Operação ${index + 1}:\nData: ${t.date}, Ativo: ${t.asset}, Entrada: ${t.entryPrice}, Saída: ${t.exitPrice}, Resultado: $${t.resultValue}, Sentimento: ${t.sentiment}, Descrição: ${t.description}\n\n`;
+        formattedTrades += `Operação ${index + 1}:\nData: ${t.date}, Ativo: ${t.asset}, Entrada: ${t.entryPrice}, Saída: ${t.exitPrice}, Resultado: $${t.resultValue}, Sentimento: ${t.sentiment}, Descrição: ${t.description}, Stop Financeiro Planejado: $${t.initialStopFinancial || 'N/A'}, Alvo Financeiro Planejado: $${t.targetFinancial || 'N/A'}\n\n`;
         
         if (t.imageUrl && t.imageUrl.startsWith('data:image')) {
           const mimeType = t.imageUrl.substring(5, t.imageUrl.indexOf(';'));
@@ -50,25 +50,34 @@ async function startServer() {
         }
       });
 
+      const riskInfo = `
+      Configurações de Risco do Usuário:
+      - Limite de Risco Diário: ${riskSettings?.dailyRiskLimit ? `$${riskSettings.dailyRiskLimit}` : 'Não definido'}
+      - Risco Máximo por Operação: ${riskSettings?.riskPerTradeLimit ? `$${riskSettings.riskPerTradeLimit}` : 'Não definido'}
+      - Máximo de Operações por Dia: ${riskSettings?.maxTradesPerDay ? riskSettings.maxTradesPerDay : 'Não definido'}
+      `;
+
       let textPrompt = '';
       if (isReport) {
         textPrompt = `Analise minhas operações de trading e me dê insights valiosos para um relatório formal.
+        ${riskInfo}
         Aqui estão as operações:
         ${formattedTrades}
         
         Por favor, forneça em HTML básico (div, p, ul, li, strong, h3, h4, sem as tags html, body, head ou marcações de bloco de código):
         1. Resumo Executivo do período analisado.
         2. Breve análise e feedback individual para cada Operação enviada (ex: "Operação 1: ...", "Operação 2: ..."), relacionando as imagens se disponíveis.
-        3. Conclusão e Plano de Ação.`;
+        3. Conclusão e Plano de Ação (Com foco especial em gerenciamento de risco e disciplina).`;
       } else {
         textPrompt = `Analise minhas operações de trading e me dê insights valiosos e pontos de melhoria.
+        ${riskInfo}
         Aqui estão as operações:
         ${formattedTrades}
         
         Forneça:
         1. Visão Geral do Desempenho
-        2. Pontos Fortes
-        3. Pontos de Atenção (Fraquezas)
+        2. Análise de Gerenciamento de Risco (Compare os resultados com os limites configurados e os stops financeiros planejados).
+        3. Pontos Fortes e Fraquezas (Foco em disciplina).
         4. Recomendações Acionáveis
         
         Se possível, identifique padrões onde eu ganho ou perco mais (ex: horários, ativos). Analise também as imagens das operações enviadas, relacionando os gráficos com o que eu descrevi nas operações. Use linguagem amigável, clara e objetiva, formatada em HTML básico (div, p, ul, li, strong, h3, h4) para que eu possa exibir diretamente no React com dangerouslySetInnerHTML (nao use tags html/body/head/markdown ou \`\`\`html).`;

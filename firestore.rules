@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Validation Blueprint for AppSettings
+    function isValidAppSettings(data) {
+      return data.keys().hasAll(['accounts']) 
+          && data.accounts is list
+          && (data.accounts.size() == 0 || (data.accounts[0].id is string && data.accounts[0].name is string));
+    }
+
+    // Validation Blueprint for Trade
+    function isValidTrade(data, userId) {
+      return data.keys().hasAll(['id', 'date', 'asset', 'entryPrice', 'initialStopPrice', 'targetPrice', 'exitPrice', 'resultType', 'resultValue'])
+          && data.id is string
+          && data.date is string
+          && data.asset is string
+          && data.entryPrice is number
+          && data.initialStopPrice is number
+          && data.targetPrice is number
+          && data.exitPrice is number
+          && data.resultType in ['Gain', 'Loss', '0x0']
+          && data.resultValue is number
+          && (data.get('ownerId', userId) == userId);
+    }
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // User settings
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidAppSettings(request.resource.data);
+      allow update: if isOwner(userId) && isValidAppSettings(request.resource.data);
+      allow delete: if false;
+
+      // Trades subcollection
+      match /trades/{tradeId} {
+        allow list: if isOwner(userId);
+        allow get: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidId(tradeId) && isValidTrade(request.resource.data, userId);
+        allow update: if isOwner(userId) && isValidTrade(request.resource.data, userId);
+        allow delete: if isOwner(userId);
+      }
+    }
+  }
+}

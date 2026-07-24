@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import { Trade, TradeResultType, Account } from '../types';
 import { ImageAnnotator } from './ImageAnnotator';
-import { getSettings } from '../store';
+import { useTradeSync } from '../hooks/useTradeSync';
 
 interface RegisterModalProps {
   onClose: () => void;
@@ -11,12 +11,12 @@ interface RegisterModalProps {
 }
 
 export function RegisterModal({ onClose, onSave, initialData }: RegisterModalProps) {
+  const { settings } = useTradeSync();
   const [accounts, setAccounts] = useState<Account[]>([]);
   
   useEffect(() => {
-    const settings = getSettings();
     setAccounts(settings.accounts || []);
-  }, []);
+  }, [settings]);
 
   const [formData, setFormData] = useState({
     accountId: initialData?.accountId || '',
@@ -46,6 +46,8 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     evalImpulseEntry: initialData?.evalImpulseEntry ?? false,
     evalMovedStop: initialData?.evalMovedStop ?? false,
     evalEarlyProfit: initialData?.evalEarlyProfit ?? false,
+    initialStopFinancial: initialData?.initialStopFinancial?.toString() || '',
+    targetFinancial: initialData?.targetFinancial?.toString() || '',
   });
 
   // Once accounts are loaded, set a default accountId if not editing an existing trade
@@ -107,6 +109,8 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
       evalImpulseEntry: formData.evalImpulseEntry,
       evalMovedStop: formData.evalMovedStop,
       evalEarlyProfit: formData.evalEarlyProfit,
+      initialStopFinancial: formData.initialStopFinancial ? Number(formData.initialStopFinancial) : undefined,
+      targetFinancial: formData.targetFinancial ? Number(formData.targetFinancial) : undefined,
       imageUrl,
       canvasData
     });
@@ -173,26 +177,33 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Preço Entrada</label>
-                <input required type="number" step="0.00001" name="entryPrice" value={formData.entryPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input required type="number" step="any" name="entryPrice" value={formData.entryPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Stop Inicial</label>
-                <input required type="number" step="0.00001" name="initialStopPrice" value={formData.initialStopPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Stop Inicial (Preço)</label>
+                <input required type="number" step="any" name="initialStopPrice" value={formData.initialStopPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Stop Inicial ($)</label>
+                <input type="number" step="any" name="initialStopFinancial" value={formData.initialStopFinancial} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Opcional" />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Preço Alvo</label>
-                <input required type="number" step="0.00001" name="targetPrice" value={formData.targetPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input required type="number" step="any" name="targetPrice" value={formData.targetPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Risco/Retorno</label>
-                <input type="text" readOnly value={riskRewardRatio !== '-' ? `1:${riskRewardRatio}` : '-'} className="w-full rounded-md border border-slate-200 bg-slate-50 p-2 text-sm text-slate-500 outline-none" />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Alvo Inicial ($)</label>
+                <input type="number" step="any" name="targetFinancial" value={formData.targetFinancial} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Opcional" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Preço Saída</label>
-                <input required type="number" step="0.00001" name="exitPrice" value={formData.exitPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                <input required type="number" step="any" name="exitPrice" value={formData.exitPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
             </div>
 
