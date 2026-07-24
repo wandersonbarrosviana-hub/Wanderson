@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <div id="target" style="width: 200px; height: 200px; background: oklch(0.5 0.2 250);">
+    <p>Hello</p>
+  </div>
+  <script type="module">
+    import { toJpeg } from 'html-to-image';
+    toJpeg(document.getElementById('target')).then(console.log).catch(console.error);
+  </script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "Diário de Trade",
+  "description": "Um aplicativo completo de diário de trade com dashboard, anotações em gráficos e histórico de operações.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

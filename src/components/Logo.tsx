@@ -1,0 +1,29 @@
+import React from 'react';
+
+export function LogoIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 100 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      {/* Candlestick 1 */}
+      <rect x="25" y="35" width="10" height="20" fill="#22c55e" />
+      <rect x="25" y="55" width="10" height="20" fill="#ef4444" />
+      <line x1="30" y1="25" x2="30" y2="35" stroke="#22c55e" strokeWidth="3" />
+      <line x1="30" y1="75" x2="30" y2="85" stroke="#ef4444" strokeWidth="3" />
+      
+      {/* Candlestick 2 */}
+      <rect x="45" y="25" width="10" height="20" fill="#22c55e" />
+      <rect x="45" y="45" width="10" height="30" fill="#ef4444" />
+      <line x1="50" y1="15" x2="50" y2="25" stroke="#22c55e" strokeWidth="3" />
+      <line x1="50" y1="75" x2="50" y2="85" stroke="#ef4444" strokeWidth="3" />
+      
+      {/* Candlestick 3 */}
+      <rect x="65" y="40" width="10" height="20" fill="#22c55e" />
+      <rect x="65" y="60" width="10" height="20" fill="#ef4444" />
+      <line x1="70" y1="30" x2="70" y2="40" stroke="#22c55e" strokeWidth="3" />
+      <line x1="70" y1="80" x2="70" y2="90" stroke="#ef4444" strokeWidth="3" />
+
+      {/* Arrow line */}
+      <path d="M 15 55 L 35 55 L 50 45 L 65 65 L 75 65" stroke="#22c55e" strokeWidth="5" strokeLinejoin="round" fill="none" />
+      <polygon points="75,58 88,65 75,72" fill="#22c55e" />
+    </svg>
+  );
+}
