@@ -23,6 +23,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     date: initialData?.date || new Date().toISOString().split('T')[0],
     asset: initialData?.asset || '',
     direction: initialData?.direction || 'Compra',
+    quantity: initialData?.quantity?.toString() || '',
     strategy: initialData?.strategy || '',
     entryPrice: initialData?.entryPrice?.toString() || '',
     initialStopPrice: initialData?.initialStopPrice?.toString() || '',
@@ -34,6 +35,11 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     partialRationale: initialData?.partialRationale || '',
     description: initialData?.description || '',
     resultValue: initialData?.resultValue?.toString() || '',
+    ratingEntryQuality: initialData?.ratingEntryQuality?.toString() || '',
+    ratingDiscipline: initialData?.ratingDiscipline?.toString() || '',
+    ratingExecution: initialData?.ratingExecution?.toString() || '',
+    ratingManagement: initialData?.ratingManagement?.toString() || '',
+    ratingEmotionalControl: initialData?.ratingEmotionalControl?.toString() || '',
   });
 
   // Once accounts are loaded, set a default accountId if not editing an existing trade
@@ -59,6 +65,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
       date: formData.date,
       asset: formData.asset,
       direction: formData.direction as any,
+      quantity: formData.quantity ? Number(formData.quantity) : undefined,
       strategy: formData.strategy,
       entryPrice: Number(formData.entryPrice),
       initialStopPrice: Number(formData.initialStopPrice),
@@ -70,6 +77,11 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
       partialRationale: formData.partialRationale,
       description: formData.description,
       resultValue: Number(formData.resultValue),
+      ratingEntryQuality: formData.ratingEntryQuality ? Number(formData.ratingEntryQuality) : undefined,
+      ratingDiscipline: formData.ratingDiscipline ? Number(formData.ratingDiscipline) : undefined,
+      ratingExecution: formData.ratingExecution ? Number(formData.ratingExecution) : undefined,
+      ratingManagement: formData.ratingManagement ? Number(formData.ratingManagement) : undefined,
+      ratingEmotionalControl: formData.ratingEmotionalControl ? Number(formData.ratingEmotionalControl) : undefined,
       imageUrl,
       canvasData
     });
@@ -114,7 +126,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Direção</label>
                 <select required name="direction" value={formData.direction} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
@@ -125,6 +137,10 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Estratégia</label>
                 <input type="text" name="strategy" value={formData.strategy} onChange={handleChange} placeholder="ex: Rompimento" className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Qtd (Contratos/Ações)</label>
+                <input type="number" step="0.01" name="quantity" value={formData.quantity} onChange={handleChange} placeholder="ex: 1 ou 100" className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
             </div>
 
@@ -178,6 +194,32 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
                 <textarea name="partialRationale" value={formData.partialRationale} onChange={handleChange} rows={2} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Explique por que realizou a parcial..."></textarea>
               </div>
             )}
+
+            <div className="border-t border-slate-200 pt-4 mt-4">
+              <h3 className="text-sm font-semibold text-slate-800 mb-3">Avaliação da Operação (0 a 10)</h3>
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Qualidade da entrada</label>
+                  <input type="number" min="0" max="10" name="ratingEntryQuality" value={formData.ratingEntryQuality} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Disciplina</label>
+                  <input type="number" min="0" max="10" name="ratingDiscipline" value={formData.ratingDiscipline} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Execução</label>
+                  <input type="number" min="0" max="10" name="ratingExecution" value={formData.ratingExecution} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Gestão</label>
+                  <input type="number" min="0" max="10" name="ratingManagement" value={formData.ratingManagement} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Controle emocional</label>
+                  <input type="number" min="0" max="10" name="ratingEmotionalControl" value={formData.ratingEmotionalControl} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+              </div>
+            </div>
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Descrição / Racional da Operação</label>

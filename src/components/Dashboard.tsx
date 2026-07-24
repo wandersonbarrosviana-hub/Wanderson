@@ -106,9 +106,34 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     const avgGain = gains.length ? totalGains / gains.length : 0;
     const avgLoss = losses.length ? totalLoss / losses.length : 0;
 
+    let currentConsecutiveGains = 0;
+    let maxConsecutiveGains = 0;
+    let currentConsecutiveLosses = 0;
+    let maxConsecutiveLosses = 0;
+
+    filteredTrades.forEach(t => {
+      if (t.resultValue > 0) {
+        currentConsecutiveGains++;
+        currentConsecutiveLosses = 0;
+        if (currentConsecutiveGains > maxConsecutiveGains) {
+          maxConsecutiveGains = currentConsecutiveGains;
+        }
+      } else if (t.resultValue < 0) {
+        currentConsecutiveLosses++;
+        currentConsecutiveGains = 0;
+        if (currentConsecutiveLosses > maxConsecutiveLosses) {
+          maxConsecutiveLosses = currentConsecutiveLosses;
+        }
+      } else {
+        // Tie (0x0) breaks streaks
+        currentConsecutiveGains = 0;
+        currentConsecutiveLosses = 0;
+      }
+    });
+
     const roi = activeInitialBalance > 0 ? (netResult / activeInitialBalance) * 100 : 0;
 
-    return { totalGains, totalLoss, netResult, maxGain, maxLoss, avgGain, avgLoss, winRate: filteredTrades.length ? (gains.length / filteredTrades.length) * 100 : 0, roi };
+    return { totalGains, totalLoss, netResult, maxGain, maxLoss, avgGain, avgLoss, winRate: filteredTrades.length ? (gains.length / filteredTrades.length) * 100 : 0, roi, totalTrades: filteredTrades.length, maxConsecutiveGains, maxConsecutiveLosses };
   }, [filteredTrades, activeInitialBalance]);
 
   const chartData = useMemo(() => {
@@ -307,7 +332,47 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
             className="rounded-md border border-slate-300 p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none" 
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 ml-2 border-l border-slate-200 pl-4">
+          <button
+            onClick={() => {
+              const now = new Date();
+              const start = new Date(now.getFullYear(), now.getMonth(), 1);
+              const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+              setStartDate(start.toISOString().split('T')[0]);
+              setEndDate(end.toISOString().split('T')[0]);
+            }}
+            className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+          >
+            No Mês
+          </button>
+          <button
+            onClick={() => {
+              const now = new Date();
+              const start = new Date(now);
+              start.setDate(start.getDate() - start.getDay()); // Sunday
+              const end = new Date(start);
+              end.setDate(end.getDate() + 6); // Saturday
+              setStartDate(start.toISOString().split('T')[0]);
+              setEndDate(end.toISOString().split('T')[0]);
+            }}
+            className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+          >
+            Na Semana
+          </button>
+          <button
+            onClick={() => {
+              const now = new Date();
+              const start = new Date(now.getFullYear(), 0, 1);
+              const end = new Date(now.getFullYear(), 11, 31);
+              setStartDate(start.toISOString().split('T')[0]);
+              setEndDate(end.toISOString().split('T')[0]);
+            }}
+            className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+          >
+            No Ano
+          </button>
+        </div>
+        <div className="flex items-center gap-2 ml-auto">
           <label className="text-sm font-medium text-slate-700">Estratégia:</label>
           <select
             value={selectedStrategy}
@@ -373,13 +438,17 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
         <StatCard title="Lucro/Prejuízo (%)" value={stats.roi} suffix="%" icon={<Percent size={20} />} valueColor={stats.roi >= 0 ? 'text-emerald-600' : 'text-red-600'} />
         <StatCard title="Resultado Líquido" value={stats.netResult} icon={<DollarSign size={20} />} isCurrency />
         <StatCard title="Win Rate" value={stats.winRate} suffix="%" icon={<Target size={20} />} />
+        <StatCard title="Total Operações" value={stats.totalTrades} icon={<Activity size={20} />} />
         
         <StatCard title="Total Gains" value={stats.totalGains} icon={<TrendingUp size={20} />} isCurrency valueColor="text-emerald-600" />
         <StatCard title="Total Loss" value={stats.totalLoss} icon={<TrendingDown size={20} />} isCurrency valueColor="text-red-600" />
         <StatCard title="Maior Gain" value={stats.maxGain} icon={<TrendingUp size={20} />} isCurrency valueColor="text-emerald-600" />
         <StatCard title="Maior Loss" value={stats.maxLoss} icon={<TrendingDown size={20} />} isCurrency valueColor="text-red-600" />
         <StatCard title="Média Gain" value={stats.avgGain} icon={<Activity size={20} />} isCurrency valueColor="text-emerald-600" />
+        
         <StatCard title="Média Loss" value={stats.avgLoss} icon={<Activity size={20} />} isCurrency valueColor="text-red-600" />
+        <StatCard title="Seq. Gains (Máx)" value={stats.maxConsecutiveGains} icon={<TrendingUp size={20} />} valueColor="text-emerald-600" />
+        <StatCard title="Seq. Loss (Máx)" value={stats.maxConsecutiveLosses} icon={<TrendingDown size={20} />} valueColor="text-red-600" />
       </div>
 
       {/* Chart */}

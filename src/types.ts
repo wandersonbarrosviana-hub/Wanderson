@@ -30,6 +30,12 @@ export interface Trade {
   partialRationale?: string;
   description: string;
   resultValue: number;
+  quantity?: number;
+  ratingEntryQuality?: number;
+  ratingDiscipline?: number;
+  ratingExecution?: number;
+  ratingManagement?: number;
+  ratingEmotionalControl?: number;
   imageUrl?: string;
   canvasData?: string; // Serialized Konva data
 }
