@@ -36,6 +36,12 @@ export interface Trade {
   ratingExecution?: number;
   ratingManagement?: number;
   ratingEmotionalControl?: number;
+  timeframe?: string;
+  evalFollowedPlan?: boolean;
+  evalRespectedSetup?: boolean;
+  evalImpulseEntry?: boolean;
+  evalMovedStop?: boolean;
+  evalEarlyProfit?: boolean;
   imageUrl?: string;
   canvasData?: string; // Serialized Konva data
 }

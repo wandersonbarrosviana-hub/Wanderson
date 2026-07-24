@@ -40,6 +40,12 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     ratingExecution: initialData?.ratingExecution?.toString() || '',
     ratingManagement: initialData?.ratingManagement?.toString() || '',
     ratingEmotionalControl: initialData?.ratingEmotionalControl?.toString() || '',
+    timeframe: initialData?.timeframe || '',
+    evalFollowedPlan: initialData?.evalFollowedPlan ?? false,
+    evalRespectedSetup: initialData?.evalRespectedSetup ?? false,
+    evalImpulseEntry: initialData?.evalImpulseEntry ?? false,
+    evalMovedStop: initialData?.evalMovedStop ?? false,
+    evalEarlyProfit: initialData?.evalEarlyProfit ?? false,
   });
 
   // Once accounts are loaded, set a default accountId if not editing an existing trade
@@ -95,6 +101,12 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
       ratingExecution: formData.ratingExecution ? Number(formData.ratingExecution) : undefined,
       ratingManagement: formData.ratingManagement ? Number(formData.ratingManagement) : undefined,
       ratingEmotionalControl: formData.ratingEmotionalControl ? Number(formData.ratingEmotionalControl) : undefined,
+      timeframe: formData.timeframe,
+      evalFollowedPlan: formData.evalFollowedPlan,
+      evalRespectedSetup: formData.evalRespectedSetup,
+      evalImpulseEntry: formData.evalImpulseEntry,
+      evalMovedStop: formData.evalMovedStop,
+      evalEarlyProfit: formData.evalEarlyProfit,
       imageUrl,
       canvasData
     });
@@ -128,7 +140,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
                 ))}
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Data</label>
                 <input required type="date" name="date" value={formData.date} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
@@ -136,6 +148,10 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Ativo Operado</label>
                 <input required type="text" name="asset" value={formData.asset} onChange={handleChange} placeholder="ex: WINV23, EURUSD" className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Timeframe</label>
+                <input type="text" name="timeframe" value={formData.timeframe} onChange={handleChange} placeholder="ex: M5, H1, D1" className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
             </div>
 
@@ -213,7 +229,30 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
             )}
 
             <div className="border-t border-slate-200 pt-4 mt-4">
-              <h3 className="text-sm font-semibold text-slate-800 mb-3">Avaliação da Operação (0 a 10)</h3>
+              <h3 className="text-sm font-semibold text-slate-800 mb-3">Checklist de Disciplina</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                  <input type="checkbox" name="evalFollowedPlan" checked={formData.evalFollowedPlan} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                  Você seguiu seu plano?
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                  <input type="checkbox" name="evalRespectedSetup" checked={formData.evalRespectedSetup} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                  A entrada respeitou o setup?
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                  <input type="checkbox" name="evalImpulseEntry" checked={formData.evalImpulseEntry} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                  Entrou por impulso?
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                  <input type="checkbox" name="evalMovedStop" checked={formData.evalMovedStop} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                  Moveu o stop?
+                </label>
+                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                  <input type="checkbox" name="evalEarlyProfit" checked={formData.evalEarlyProfit} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                  Realizou lucro antes da hora?
+                </label>
+              </div>
+              <h3 className="text-sm font-semibold text-slate-800 mb-3">Notas da Operação (0 a 10)</h3>
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Qualidade da entrada</label>

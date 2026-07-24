@@ -372,14 +372,13 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
           <button
             onClick={() => {
               const now = new Date();
-              const start = new Date(now.getFullYear(), now.getMonth(), 1);
-              const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-              setStartDate(start.toISOString().split('T')[0]);
-              setEndDate(end.toISOString().split('T')[0]);
+              const dateStr = now.toISOString().split('T')[0];
+              setStartDate(dateStr);
+              setEndDate(dateStr);
             }}
             className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
           >
-            No Mês
+            No Dia
           </button>
           <button
             onClick={() => {
@@ -394,6 +393,18 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
             className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
           >
             Na Semana
+          </button>
+          <button
+            onClick={() => {
+              const now = new Date();
+              const start = new Date(now.getFullYear(), now.getMonth(), 1);
+              const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+              setStartDate(start.toISOString().split('T')[0]);
+              setEndDate(end.toISOString().split('T')[0]);
+            }}
+            className="px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition-colors"
+          >
+            No Mês
           </button>
           <button
             onClick={() => {
