@@ -12,7 +12,17 @@ export interface AppSettings {
   dailyRiskLimit?: number;
   riskPerTradeLimit?: number;
   maxTradesPerDay?: number;
+  setups?: string[];
 }
+
+export const DEFAULT_SETUPS = [
+  'Trade abertura',
+  'Rejeição de fundo',
+  'Rejeição de topo',
+  'Retorno/Pullback',
+  'Barra elefante (a favor da tendência)',
+  'Barra elefante (falha de continuação de tendência)'
+];
 
 export type TradeDirection = 'Compra' | 'Venda';
 
@@ -49,5 +59,6 @@ export interface Trade {
   targetFinancial?: number;
   trend?: 'a favor' | 'contra' | 'lateralizado';
   imageUrl?: string;
+  annotatedImageUrl?: string;
   canvasData?: string; // Serialized Konva data
 }

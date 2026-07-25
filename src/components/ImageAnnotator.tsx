@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Stage, Layer, Image as KonvaImage, Rect, Circle, Text, Arrow, Transformer } from 'react-konva';
+import { Stage, Layer, Image as KonvaImage, Rect, Circle, Text, Arrow, Transformer, Group } from 'react-konva';
 import useImage from 'use-image';
 import { 
   Type, 
@@ -7,11 +7,17 @@ import {
   Circle as CircleIcon, 
   ArrowUpRight, 
   MousePointer2,
-  Trash2
+  Trash2,
+  Maximize2,
+  Minimize2,
+  Palette,
+  Minus,
+  Image as ImageIcon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 type ToolType = 'select' | 'text' | 'rect' | 'circle' | 'arrow';
+type DashType = 'solid' | 'dashed' | 'dotted';
 
 interface Element {
   id: string;
@@ -26,25 +32,93 @@ interface Element {
   fill?: string;
   stroke?: string;
   fontSize?: number;
+  dash?: number[];
 }
 
 interface ImageAnnotatorProps {
   imageUrl?: string;
   initialElements?: Element[];
-  onChange: (imageUrl: string, elements: Element[]) => void;
+  onChange: (imageUrl: string, elements: Element[], annotatedImageUrl?: string) => void;
   readOnly?: boolean;
 }
+
+const COLORS = [
+  { name: 'Red', value: '#ef4444' },
+  { name: 'Blue', value: '#3b82f6' },
+  { name: 'Green', value: '#10b981' },
+  { name: 'Yellow', value: '#f59e0b' },
+  { name: 'Black', value: '#0f172a' },
+  { name: 'Purple', value: '#a855f7' }
+];
+
+const DASH_STYLES: Record<DashType, number[] | undefined> = {
+  solid: undefined,
+  dashed: [10, 5],
+  dotted: [2, 4]
+};
+
+const VIRTUAL_SIZE = 1000;
 
 export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readOnly = false }: ImageAnnotatorProps) {
   const [image] = useImage(imageUrl || '');
   const [elements, setElements] = useState<Element[]>(initialElements);
   const [selectedTool, setSelectedTool] = useState<ToolType>('select');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState(COLORS[0].value);
+  const [selectedDash, setSelectedDash] = useState<DashType>('solid');
   const [isDrawing, setIsDrawing] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [textInput, setTextInput] = useState<{ visible: boolean, x: number, y: number, value: string, id: string | null }>({ visible: false, x: 0, y: 0, value: '', id: null });
   const stageRef = useRef<any>(null);
   const trRef = useRef<any>(null);
   const textInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
+
+  let imageScale = 1;
+  let imagePos = { x: 0, y: 0 };
+  let virtualScale = 1;
+
+  if (image && stageSize.width > 0) {
+    const scaleX = stageSize.width / image.width;
+    const scaleY = stageSize.height / image.height;
+    imageScale = Math.min(scaleX, scaleY);
+    if (imageScale > 1) imageScale = 1;
+    imagePos = {
+      x: (stageSize.width - image.width * imageScale) / 2,
+      y: (stageSize.height - image.height * imageScale) / 2
+    };
+    virtualScale = (image.width * imageScale) / VIRTUAL_SIZE;
+  }
+
+  const getVirtualPointerPos = () => {
+    if (!stageRef.current || !image) return { x: 0, y: 0 };
+    const pos = stageRef.current.getPointerPosition();
+    if (!pos) return { x: 0, y: 0 };
+    return {
+      x: (pos.x - imagePos.x) / virtualScale,
+      y: (pos.y - imagePos.y) / virtualScale
+    };
+  };
+
+  const exportFlattened = useCallback(() => {
+    if (stageRef.current && image) {
+      const tr = stageRef.current.findOne('Transformer');
+      if (tr) tr.hide();
+      
+      const dataUrl = stageRef.current.toDataURL({ 
+        pixelRatio: 2,
+        x: imagePos.x,
+        y: imagePos.y,
+        width: image.width * imageScale,
+        height: image.height * imageScale
+      });
+      
+      if (tr) tr.show();
+      return dataUrl;
+    }
+    return undefined;
+  }, [image, imagePos, imageScale]);
 
   useEffect(() => {
     if (textInput.visible && textInputRef.current) {
@@ -54,17 +128,26 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
     }
   }, [textInput.visible]);
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
-
   useEffect(() => {
-    if (containerRef.current) {
-      setStageSize({
-        width: containerRef.current.offsetWidth,
-        height: containerRef.current.offsetHeight || 400
-      });
-    }
-  }, [imageUrl]);
+    const updateSize = () => {
+      if (containerRef.current) {
+        setStageSize({
+          width: containerRef.current.offsetWidth,
+          height: containerRef.current.offsetHeight || 400
+        });
+      }
+    };
+    
+    updateSize();
+    // Add a small delay to ensure the DOM has updated classes before measuring
+    const timer = setTimeout(updateSize, 50);
+    
+    window.addEventListener('resize', updateSize);
+    return () => {
+      window.removeEventListener('resize', updateSize);
+      clearTimeout(timer);
+    };
+  }, [imageUrl, isFullscreen]);
 
   useEffect(() => {
     setElements(initialElements);
@@ -81,7 +164,7 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
   }, [selectedId, elements, readOnly]);
 
   const handleMouseDown = (e: any) => {
-    if (readOnly) return;
+    if (readOnly || !image) return;
 
     if (textInput.visible) {
       return;
@@ -95,15 +178,17 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
       return;
     }
 
-    const pos = e.target.getStage().getPointerPosition();
+    const pos = getVirtualPointerPos();
     const id = Math.random().toString(36).substr(2, 9);
     setIsDrawing(true);
 
     if (selectedTool === 'text') {
+      const stage = e.target.getStage();
+      const pointer = stage.getPointerPosition();
       setTextInput({
         visible: true,
-        x: pos.x,
-        y: pos.y,
+        x: pointer.x,
+        y: pointer.y,
         value: '',
         id
       });
@@ -112,11 +197,11 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
 
     let newEl: Element;
     if (selectedTool === 'rect') {
-      newEl = { id, type: 'rect', x: pos.x, y: pos.y, width: 0, height: 0, stroke: '#ef4444' };
+      newEl = { id, type: 'rect', x: pos.x, y: pos.y, width: 0, height: 0, stroke: selectedColor, dash: DASH_STYLES[selectedDash] };
     } else if (selectedTool === 'circle') {
-      newEl = { id, type: 'circle', x: pos.x, y: pos.y, radius: 0, stroke: '#3b82f6' };
+      newEl = { id, type: 'circle', x: pos.x, y: pos.y, radius: 0, stroke: selectedColor, dash: DASH_STYLES[selectedDash] };
     } else if (selectedTool === 'arrow') {
-      newEl = { id, type: 'arrow', x: pos.x, y: pos.y, points: [0, 0, 0, 0], stroke: '#10b981' };
+      newEl = { id, type: 'arrow', x: pos.x, y: pos.y, points: [0, 0, 0, 0], stroke: selectedColor, dash: DASH_STYLES[selectedDash] };
     } else {
       return;
     }
@@ -128,7 +213,7 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
   const handleMouseMove = (e: any) => {
     if (readOnly || !isDrawing || selectedTool === 'select' || selectedTool === 'text') return;
 
-    const pos = e.target.getStage().getPointerPosition();
+    const pos = getVirtualPointerPos();
     const lastEl = { ...elements[elements.length - 1] };
 
     if (selectedTool === 'rect') {
@@ -151,7 +236,10 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
     setIsDrawing(false);
     if (selectedTool !== 'select' && selectedTool !== 'text') {
       setSelectedTool('select');
-      onChange(imageUrl || '', elements);
+      // Use setTimeout to allow state to settle before export
+      setTimeout(() => {
+        onChange(imageUrl || '', elements, exportFlattened());
+      }, 0);
     }
   };
 
@@ -162,14 +250,16 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
       if (el.id === id) {
         return {
           ...el,
-          x: node.x(),
-          y: node.y()
+          x: (node.x() - imagePos.x) / virtualScale,
+          y: (node.y() - imagePos.y) / virtualScale
         };
       }
       return el;
     });
     setElements(newElements);
-    onChange(imageUrl || '', newElements);
+    setTimeout(() => {
+      onChange(imageUrl || '', newElements, exportFlattened());
+    }, 100);
   };
 
   const handleTransformEnd = (e: any, id: string) => {
@@ -185,41 +275,43 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
         if (el.type === 'rect') {
           return {
             ...el,
-            x: node.x(),
-            y: node.y(),
-            width: Math.max(5, (el.width || 0) * scaleX),
-            height: Math.max(5, (el.height || 0) * scaleY)
+            x: (node.x() - imagePos.x) / virtualScale,
+            y: (node.y() - imagePos.y) / virtualScale,
+            width: (el.width || 0) * scaleX,
+            height: (el.height || 0) * scaleY
           };
         }
         if (el.type === 'circle') {
           return {
             ...el,
-            x: node.x(),
-            y: node.y(),
-            radius: Math.max(5, (el.radius || 0) * Math.max(scaleX, scaleY))
+            x: (node.x() - imagePos.x) / virtualScale,
+            y: (node.y() - imagePos.y) / virtualScale,
+            radius: (el.radius || 0) * Math.max(scaleX, scaleY)
           };
         }
         if (el.type === 'arrow') {
           return {
             ...el,
-            x: node.x(),
-            y: node.y(),
+            x: (node.x() - imagePos.x) / virtualScale,
+            y: (node.y() - imagePos.y) / virtualScale,
             points: (el.points || []).map((p, i) => i % 2 === 0 ? p * scaleX : p * scaleY)
           };
         }
         if (el.type === 'text') {
            return {
              ...el,
-             x: node.x(),
-             y: node.y(),
-             fontSize: Math.max(10, (el.fontSize || 20) * Math.max(scaleX, scaleY))
+             x: (node.x() - imagePos.x) / virtualScale,
+             y: (node.y() - imagePos.y) / virtualScale,
+             fontSize: (el.fontSize || 20) * Math.max(scaleX, scaleY)
            };
         }
       }
       return el;
     });
     setElements(newElements);
-    onChange(imageUrl || '', newElements);
+    setTimeout(() => {
+      onChange(imageUrl || '', newElements, exportFlattened());
+    }, 100);
   };
 
   const handleDelete = () => {
@@ -227,7 +319,41 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
       const newElements = elements.filter(el => el.id !== selectedId);
       setElements(newElements);
       setSelectedId(null);
-      onChange(imageUrl || '', newElements);
+      setTimeout(() => {
+        onChange(imageUrl || '', newElements, exportFlattened());
+      }, 0);
+    }
+  };
+
+  const handleColorChange = (color: string) => {
+    setSelectedColor(color);
+    if (selectedId) {
+      const newElements = elements.map(el => {
+        if (el.id === selectedId) {
+          return { ...el, stroke: color, fill: el.type === 'text' ? color : undefined };
+        }
+        return el;
+      });
+      setElements(newElements);
+      setTimeout(() => {
+        onChange(imageUrl || '', newElements, exportFlattened());
+      }, 0);
+    }
+  };
+
+  const handleDashChange = (dashStyle: DashType) => {
+    setSelectedDash(dashStyle);
+    if (selectedId) {
+      const newElements = elements.map(el => {
+        if (el.id === selectedId && (el.type === 'rect' || el.type === 'circle' || el.type === 'arrow')) {
+          return { ...el, dash: DASH_STYLES[dashStyle] };
+        }
+        return el;
+      });
+      setElements(newElements);
+      setTimeout(() => {
+        onChange(imageUrl || '', newElements, exportFlattened());
+      }, 0);
     }
   };
 
@@ -278,23 +404,21 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
     return () => window.removeEventListener('paste', handlePaste);
   }, [handlePaste]);
 
-  let imageScale = 1;
-  let imagePos = { x: 0, y: 0 };
-  if (image && stageSize.width > 0) {
-    const scaleX = stageSize.width / image.width;
-    const scaleY = stageSize.height / image.height;
-    imageScale = Math.min(scaleX, scaleY);
-    if (imageScale > 1) imageScale = 1;
-    imagePos = {
-      x: (stageSize.width - image.width * imageScale) / 2,
-      y: (stageSize.height - image.height * imageScale) / 2
-    };
-  }
-
   return (
-    <div className="flex flex-col h-full w-full bg-slate-50 border border-slate-200 rounded-lg overflow-hidden relative" ref={containerRef}>
+    <div 
+      className={cn(
+        "flex flex-col bg-slate-50 overflow-hidden transition-all",
+        isFullscreen 
+          ? "fixed inset-0 z-[60] p-4 bg-slate-900/90" 
+          : "h-full w-full border border-slate-200 rounded-lg relative"
+      )} 
+      ref={containerRef}
+    >
       {!readOnly && (
-        <div className="bg-white border-b border-slate-200 p-2 flex items-center gap-2 flex-wrap">
+        <div className={cn(
+          "bg-white border-b border-slate-200 p-2 flex items-center gap-2 overflow-x-auto no-scrollbar min-h-[52px]",
+          isFullscreen && "rounded-t-lg"
+        )}>
           <input 
             type="file" 
             accept="image/*" 
@@ -302,29 +426,81 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
             id="image-upload" 
             onChange={handleImageUpload}
           />
-          <label 
-            htmlFor="image-upload" 
-            className="cursor-pointer px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-md transition-colors"
-          >
-            {imageUrl ? 'Trocar Imagem' : 'Carregar Imagem / Colar'}
-          </label>
+          <ToolButton 
+            icon={<ImageIcon size={20} />} 
+            onClick={() => document.getElementById('image-upload')?.click()} 
+            title="Upload" 
+            className="flex-shrink-0" 
+          />
 
           {imageUrl && (
             <>
-              <div className="w-px h-6 bg-slate-300 mx-1"></div>
-              <ToolButton icon={<MousePointer2 size={18} />} active={selectedTool === 'select'} onClick={() => setSelectedTool('select')} title="Selecionar" />
-              <ToolButton icon={<Square size={18} />} active={selectedTool === 'rect'} onClick={() => setSelectedTool('rect')} title="Retângulo (Resistência)" />
-              <ToolButton icon={<CircleIcon size={18} />} active={selectedTool === 'circle'} onClick={() => setSelectedTool('circle')} title="Círculo (Ponto chave)" />
-              <ToolButton icon={<ArrowUpRight size={18} />} active={selectedTool === 'arrow'} onClick={() => setSelectedTool('arrow')} title="Seta" />
-              <ToolButton icon={<Type size={18} />} active={selectedTool === 'text'} onClick={() => setSelectedTool('text')} title="Texto" />
+              <div className="w-px h-6 bg-slate-300 mx-1 flex-shrink-0"></div>
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <ToolButton icon={<MousePointer2 size={20} />} active={selectedTool === 'select'} onClick={() => setSelectedTool('select')} title="Selecionar" />
+                <ToolButton icon={<Square size={20} />} active={selectedTool === 'rect'} onClick={() => setSelectedTool('rect')} title="Retângulo" />
+                <ToolButton icon={<CircleIcon size={20} />} active={selectedTool === 'circle'} onClick={() => setSelectedTool('circle')} title="Círculo" />
+                <ToolButton icon={<ArrowUpRight size={20} />} active={selectedTool === 'arrow'} onClick={() => setSelectedTool('arrow')} title="Seta" />
+                <ToolButton icon={<Type size={20} />} active={selectedTool === 'text'} onClick={() => setSelectedTool('text')} title="Texto" />
+              </div>
               
+              <div className="w-px h-6 bg-slate-300 mx-1 flex-shrink-0"></div>
+              
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {COLORS.map(c => (
+                  <button 
+                    key={c.value}
+                    onClick={() => handleColorChange(c.value)}
+                    className={cn(
+                      "w-8 h-8 rounded-full border-2 transition-transform",
+                      selectedColor === c.value ? "border-slate-800 scale-110" : "border-transparent hover:scale-105"
+                    )}
+                    style={{ backgroundColor: c.value }}
+                    title={c.name}
+                  />
+                ))}
+              </div>
+
+              <div className="w-px h-6 bg-slate-300 mx-1 flex-shrink-0"></div>
+
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {(Object.keys(DASH_STYLES) as DashType[]).map(style => (
+                  <button
+                    key={style}
+                    onClick={() => handleDashChange(style)}
+                    className={cn(
+                      "px-3 py-1.5 text-[10px] font-bold border rounded transition-colors min-w-[44px] flex items-center justify-center",
+                      selectedDash === style ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                    )}
+                    title={style.charAt(0).toUpperCase() + style.slice(1)}
+                  >
+                    {style === 'solid' && <div className="w-6 h-0.5 bg-current" />}
+                    {style === 'dashed' && <div className="w-6 h-0.5 border-b-2 border-dashed border-current" />}
+                    {style === 'dotted' && <div className="w-6 h-0.5 border-b-2 border-dotted border-current" />}
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-px h-6 bg-slate-300 mx-1 flex-shrink-0"></div>
+              
+              <button 
+                onClick={() => setIsFullscreen(!isFullscreen)}
+                className={cn(
+                  "p-2 rounded-md transition-colors flex-shrink-0",
+                  isFullscreen ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"
+                )}
+                title={isFullscreen ? "Sair do Foco" : "Focar / Tela Cheia"}
+              >
+                {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+              </button>
+
               {selectedId && (
                 <button 
                   onClick={handleDelete}
-                  className="ml-auto p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                  title="Deletar Selecionado"
+                  className="ml-auto p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors flex-shrink-0"
+                  title="Excluir Elemento"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 size={20} />
                 </button>
               )}
             </>
@@ -332,7 +508,19 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
         </div>
       )}
 
-      <div className="flex-1 w-full bg-slate-100 min-h-[400px] relative">
+      <div className={cn(
+        "flex-1 w-full bg-slate-100 min-h-[400px] relative overflow-hidden touch-none",
+        isFullscreen && "bg-white rounded-b-lg"
+      )}>
+        {imageUrl && (
+          <button 
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="absolute top-4 right-4 z-10 p-2 bg-white/80 hover:bg-white text-slate-700 rounded-full shadow-md transition-all hover:scale-110 border border-slate-200"
+            title={isFullscreen ? "Sair do Foco" : "Ver em Tela Cheia"}
+          >
+            {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+          </button>
+        )}
         {textInput.visible && !readOnly && (
           <input
             ref={textInputRef}
@@ -343,10 +531,12 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
                 if (textInput.value) {
-                  const newEl: Element = { id: textInput.id!, type: 'text', x: textInput.x, y: textInput.y, text: textInput.value, fill: '#ef4444', fontSize: 20 };
+                  const newEl: Element = { id: textInput.id!, type: 'text', x: (textInput.x - imagePos.x) / virtualScale, y: (textInput.y - imagePos.y) / virtualScale, text: textInput.value, fill: selectedColor, fontSize: 20 };
                   const newElements = [...elements, newEl];
                   setElements(newElements);
-                  onChange(imageUrl || '', newElements);
+                  setTimeout(() => {
+                    onChange(imageUrl || '', newElements, exportFlattened());
+                  }, 100);
                 }
                 setTextInput({ visible: false, x: 0, y: 0, value: '', id: null });
                 setSelectedTool('select');
@@ -360,10 +550,12 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
             }}
             onBlur={() => {
               if (textInput.value) {
-                  const newEl: Element = { id: textInput.id!, type: 'text', x: textInput.x, y: textInput.y, text: textInput.value, fill: '#ef4444', fontSize: 20 };
+                  const newEl: Element = { id: textInput.id!, type: 'text', x: (textInput.x - imagePos.x) / virtualScale, y: (textInput.y - imagePos.y) / virtualScale, text: textInput.value, fill: selectedColor, fontSize: 20 };
                   const newElements = [...elements, newEl];
                   setElements(newElements);
-                  onChange(imageUrl || '', newElements);
+                  setTimeout(() => {
+                    onChange(imageUrl || '', newElements, exportFlattened());
+                  }, 100);
               }
               setTextInput({ visible: false, x: 0, y: 0, value: '', id: null });
               setSelectedTool('select');
@@ -378,6 +570,9 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
+            onTouchStart={handleMouseDown}
+            onTouchMove={handleMouseMove}
+            onTouchEnd={handleMouseUp}
             ref={stageRef}
           >
             <Layer>
@@ -387,35 +582,43 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
                 y={imagePos.y}
                 scaleX={imageScale}
                 scaleY={imageScale}
+                name="background-image"
               />
-              {elements.map((el, i) => {
-                const isSelected = el.id === selectedId;
-                const commonProps = {
-                  id: el.id,
-                  x: el.x,
-                  y: el.y,
-                  draggable: !readOnly && isSelected,
-                  onClick: () => !readOnly && setSelectedId(el.id),
-                  onTap: () => !readOnly && setSelectedId(el.id),
-                  onDragEnd: (e: any) => handleDragEnd(e, el.id),
-                  onTransformEnd: (e: any) => handleTransformEnd(e, el.id),
-                  strokeWidth: isSelected ? 3 : 2,
-                };
+              <Group
+                x={imagePos.x}
+                y={imagePos.y}
+                scaleX={virtualScale}
+                scaleY={virtualScale}
+              >
+                {elements.map((el, i) => {
+                  const isSelected = el.id === selectedId;
+                  const commonProps = {
+                    id: el.id,
+                    x: el.x,
+                    y: el.y,
+                    draggable: !readOnly && isSelected,
+                    onClick: () => !readOnly && setSelectedId(el.id),
+                    onTap: () => !readOnly && setSelectedId(el.id),
+                    onDragEnd: (e: any) => handleDragEnd(e, el.id),
+                    onTransformEnd: (e: any) => handleTransformEnd(e, el.id),
+                    strokeWidth: 4 / virtualScale,
+                  };
 
-                if (el.type === 'rect') {
-                  return <Rect key={el.id} {...commonProps} width={el.width} height={el.height} stroke={el.stroke} />;
-                }
-                if (el.type === 'circle') {
-                  return <Circle key={el.id} {...commonProps} radius={el.radius} stroke={el.stroke} />;
-                }
-                if (el.type === 'arrow') {
-                  return <Arrow key={el.id} {...commonProps} points={el.points || []} stroke={el.stroke} fill={el.stroke} />;
-                }
-                if (el.type === 'text') {
-                  return <Text key={el.id} {...commonProps} text={el.text} fill={el.fill} fontSize={el.fontSize} />;
-                }
-                return null;
-              })}
+                  if (el.type === 'rect') {
+                    return <Rect key={el.id} {...commonProps} width={el.width} height={el.height} stroke={el.stroke} dash={el.dash} />;
+                  }
+                  if (el.type === 'circle') {
+                    return <Circle key={el.id} {...commonProps} radius={el.radius} stroke={el.stroke} dash={el.dash} />;
+                  }
+                  if (el.type === 'arrow') {
+                    return <Arrow key={el.id} {...commonProps} points={el.points || []} stroke={el.stroke} fill={el.stroke} dash={el.dash} pointerLength={15 / virtualScale} pointerWidth={15 / virtualScale} />;
+                  }
+                  if (el.type === 'text') {
+                    return <Text key={el.id} {...commonProps} text={el.text} fill={el.fill} fontSize={el.fontSize || 20} />;
+                  }
+                  return null;
+                })}
+              </Group>
               {selectedId && !readOnly && (
                 <Transformer
                   ref={trRef}
@@ -425,6 +628,8 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
                     }
                     return newBox;
                   }}
+                  anchorSize={12}
+                  rotateAnchorOffset={25}
                 />
               )}
             </Layer>
@@ -435,18 +640,20 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
           </div>
         )}
       </div>
+
     </div>
   );
 }
 
-function ToolButton({ icon, active, onClick, title }: { icon: React.ReactNode, active: boolean, onClick: () => void, title: string }) {
+function ToolButton({ icon, active, onClick, title, className }: { icon: React.ReactNode, active?: boolean, onClick: () => void, title: string, className?: string }) {
   return (
     <button
       onClick={onClick}
       title={title}
       className={cn(
-        "p-1.5 rounded-md transition-colors",
-        active ? "bg-blue-100 text-blue-700" : "text-slate-600 hover:bg-slate-100"
+        "p-2 rounded-md transition-all",
+        active ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100",
+        className
       )}
     >
       {icon}

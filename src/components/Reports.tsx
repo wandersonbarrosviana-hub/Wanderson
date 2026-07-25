@@ -351,9 +351,9 @@ export function Reports({ trades }: ReportsProps) {
                     <div className="col-span-2"><span className="text-slate-500">Descrição:</span> <p className="mt-1">{trade.description}</p></div>
                   </div>
 
-                  {trade.imageUrl ? (
+                  {trade.annotatedImageUrl || trade.imageUrl ? (
                     <div className="border-t border-slate-200 p-4 bg-slate-50 text-center">
-                      <img src={trade.imageUrl} alt={`Operação ${index + 1}`} className="max-w-full h-auto mx-auto border border-slate-300 rounded shadow-sm" style={{ maxHeight: '400px', objectFit: 'contain' }} />
+                      <img src={trade.annotatedImageUrl || trade.imageUrl} alt={`Operação ${index + 1}`} className="max-w-full h-auto mx-auto border border-slate-300 rounded shadow-sm" style={{ maxHeight: '400px', objectFit: 'contain' }} />
                     </div>
                   ) : (
                     <div className="border-t border-slate-200 p-4 bg-slate-50 text-center text-slate-400 italic text-sm">

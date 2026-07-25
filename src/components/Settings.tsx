@@ -47,8 +47,42 @@ export function Settings() {
     setSaved(false);
   };
 
+  const handleAddSetup = () => {
+    const newSetup = "";
+    setSettings({
+      ...settings,
+      setups: [...(settings.setups || []), newSetup]
+    });
+    setSaved(false);
+  };
+
+  const handleUpdateSetup = (index: number, value: string) => {
+    const newSetups = [...(settings.setups || [])];
+    newSetups[index] = value;
+    setSettings({
+      ...settings,
+      setups: newSetups
+    });
+    setSaved(false);
+  };
+
+  const handleRemoveSetup = (index: number) => {
+    const newSetups = (settings.setups || []).filter((_, i) => i !== index);
+    setSettings({
+      ...settings,
+      setups: newSetups
+    });
+    setSaved(false);
+  };
+
   const handleSave = async () => {
-    await updateSettings(settings);
+    // Filter out empty setups before saving
+    const cleanedSettings = {
+      ...settings,
+      setups: (settings.setups || []).filter(s => s.trim() !== '')
+    };
+    await updateSettings(cleanedSettings);
+    setSettings(cleanedSettings);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
@@ -146,6 +180,47 @@ export function Settings() {
               />
               <p className="text-[10px] text-slate-400 mt-1">Número máximo de entradas planejadas.</p>
             </div>
+          </div>
+        </div>
+
+        {/* Setups Section */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-800">Setups Predefinidos</h2>
+            <button
+              onClick={handleAddSetup}
+              className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+            >
+              <Plus size={16} />
+              Adicionar Setup
+            </button>
+          </div>
+          <p className="text-sm text-slate-500 mb-4">Estes setups aparecerão como opções ao registrar uma nova operação.</p>
+          
+          <div className="space-y-2">
+            {(settings.setups || []).map((setup, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={setup}
+                  onChange={(e) => handleUpdateSetup(index, e.target.value)}
+                  className="flex-1 rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Nome do setup..."
+                />
+                <button
+                  onClick={() => handleRemoveSetup(index)}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                  title="Remover Setup"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            ))}
+            {(settings.setups || []).length === 0 && (
+              <p className="text-center py-4 text-slate-400 italic text-sm border-2 border-dashed border-slate-100 rounded-lg">
+                Nenhum setup cadastrado.
+              </p>
+            )}
           </div>
         </div>
 

@@ -4,11 +4,9 @@ import { useTradeSync } from '../hooks/useTradeSync';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, BarChart, Bar, Cell, PieChart, Pie, Legend } from 'recharts';
 import { format, parseISO, isAfter, isBefore, startOfDay, endOfDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameMonth, parse } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { TrendingUp, TrendingDown, DollarSign, Activity, Target, Percent, X } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, Activity, Target, Percent, X, Shield, AlertTriangle, ListChecks } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { RegisterModal } from './RegisterModal';
-
-import { Shield, AlertTriangle, ListChecks, TrendingDown } from 'lucide-react';
 
 interface DashboardProps {
   trades: Trade[];
@@ -26,6 +24,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
   const [selectedResultType, setSelectedResultType] = useState<string>('all');
   const [selectedAsset, setSelectedAsset] = useState<string>('all');
   const [selectedTrend, setSelectedTrend] = useState<string>('all');
+  const [selectedPartial, setSelectedPartial] = useState<string>('all');
   const [viewTrade, setViewTrade] = useState<Trade | null>(null);
   const [isChartHovered, setIsChartHovered] = useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
@@ -72,8 +71,12 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     if (selectedTrend !== 'all') {
       filtered = filtered.filter(t => t.trend === selectedTrend);
     }
+    if (selectedPartial !== 'all') {
+      const isPartial = selectedPartial === 'true';
+      filtered = filtered.filter(t => t.isPartial === isPartial);
+    }
     return filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  }, [trades, startDate, endDate, selectedAccountId, accounts, selectedStrategy, selectedSentiment, selectedResultType, selectedAsset, selectedTrend]);
+  }, [trades, startDate, endDate, selectedAccountId, accounts, selectedStrategy, selectedSentiment, selectedResultType, selectedAsset, selectedTrend, selectedPartial]);
 
   const uniqueStrategies = useMemo(() => {
     const strategies = new Set<string>();
@@ -574,8 +577,30 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
             <option value="lateralizado">Lateralizado</option>
           </select>
         </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-slate-700">Parcial:</label>
+          <select
+            value={selectedPartial}
+            onChange={e => setSelectedPartial(e.target.value)}
+            className="rounded-md border border-slate-300 p-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none max-w-[120px]"
+          >
+            <option value="all">Todos</option>
+            <option value="true">Com Parcial</option>
+            <option value="false">Sem Parcial</option>
+          </select>
+        </div>
         <button 
-          onClick={() => { setStartDate(''); setEndDate(''); setSelectedAccountId('all'); setSelectedStrategy('all'); setSelectedSentiment('all'); setSelectedResultType('all'); setSelectedAsset('all'); setSelectedTrend('all'); }}
+          onClick={() => { 
+            setStartDate(''); 
+            setEndDate(''); 
+            setSelectedAccountId('all'); 
+            setSelectedStrategy('all'); 
+            setSelectedSentiment('all'); 
+            setSelectedResultType('all'); 
+            setSelectedAsset('all'); 
+            setSelectedTrend('all');
+            setSelectedPartial('all');
+          }}
           className="text-sm text-blue-600 hover:text-blue-800 ml-auto"
         >
           Limpar Filtros

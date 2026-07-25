@@ -1,4 +1,4 @@
-import { Trade, AppSettings } from './types';
+import { Trade, AppSettings, DEFAULT_SETUPS } from './types';
 
 const STORAGE_KEY = 'trading_diary_trades';
 const SETTINGS_KEY = 'trading_diary_settings';
@@ -8,6 +8,8 @@ export const getSettings = (): AppSettings => {
     const data = localStorage.getItem(SETTINGS_KEY);
     if (data) {
       const parsed = JSON.parse(data);
+      let needsSave = false;
+
       if (!parsed.accounts || parsed.accounts.length === 0) {
         // Migrate legacy settings
         parsed.accounts = [
@@ -17,13 +19,30 @@ export const getSettings = (): AppSettings => {
             initialBalance: parsed.initialBalance || 0
           }
         ];
+        needsSave = true;
+      }
+
+      if (!parsed.setups) {
+        parsed.setups = [...DEFAULT_SETUPS];
+        needsSave = true;
+      }
+
+      if (needsSave) {
         saveSettings(parsed);
       }
       return parsed;
     }
-    return { initialBalance: 0, accounts: [{ id: 'default', name: 'Conta Principal', initialBalance: 0 }] };
+    return { 
+      initialBalance: 0, 
+      accounts: [{ id: 'default', name: 'Conta Principal', initialBalance: 0 }],
+      setups: [...DEFAULT_SETUPS]
+    };
   } catch (error) {
-    return { initialBalance: 0, accounts: [{ id: 'default', name: 'Conta Principal', initialBalance: 0 }] };
+    return { 
+      initialBalance: 0, 
+      accounts: [{ id: 'default', name: 'Conta Principal', initialBalance: 0 }],
+      setups: [...DEFAULT_SETUPS]
+    };
   }
 };
 

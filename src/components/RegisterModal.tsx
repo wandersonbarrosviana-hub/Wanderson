@@ -25,6 +25,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     direction: initialData?.direction || 'Compra',
     quantity: initialData?.quantity?.toString() || '',
     strategy: initialData?.strategy || '',
+    customStrategy: '', // Added to handle "Outros" field
     trend: initialData?.trend || '',
     entryPrice: initialData?.entryPrice?.toString() || '',
     initialStopPrice: initialData?.initialStopPrice?.toString() || '',
@@ -51,6 +52,22 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     targetFinancial: initialData?.targetFinancial?.toString() || '',
   });
 
+  const [isOtherStrategy, setIsOtherStrategy] = useState(false);
+
+  useEffect(() => {
+    if (initialData?.strategy && settings.setups) {
+      const isPredefined = settings.setups.includes(initialData.strategy);
+      if (!isPredefined) {
+        setIsOtherStrategy(true);
+        setFormData(prev => ({ 
+          ...prev, 
+          strategy: 'Outros..',
+          customStrategy: initialData.strategy || ''
+        }));
+      }
+    }
+  }, [initialData, settings.setups]);
+
   // Once accounts are loaded, set a default accountId if not editing an existing trade
   useEffect(() => {
     if (accounts.length > 0 && !formData.accountId && !initialData) {
@@ -59,6 +76,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
   }, [accounts, formData.accountId, initialData]);
 
   const [imageUrl, setImageUrl] = useState<string>(initialData?.imageUrl || '');
+  const [annotatedImageUrl, setAnnotatedImageUrl] = useState<string>(initialData?.annotatedImageUrl || '');
   const [canvasData, setCanvasData] = useState<string>(initialData?.canvasData || '[]');
 
   const riskRewardRatio = React.useMemo(() => {
@@ -77,18 +95,30 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     const val = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+    
+    if (name === 'strategy') {
+      if (value === 'Outros..') {
+        setIsOtherStrategy(true);
+      } else {
+        setIsOtherStrategy(false);
+      }
+    }
+    
     setFormData(prev => ({ ...prev, [name]: val }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const finalStrategy = formData.strategy === 'Outros..' ? formData.customStrategy : formData.strategy;
+
     onSave({
       accountId: formData.accountId,
       date: formData.date,
       asset: formData.asset,
       direction: formData.direction as any,
       quantity: formData.quantity ? Number(formData.quantity) : undefined,
-      strategy: formData.strategy,
+      strategy: finalStrategy,
       trend: formData.trend as any,
       entryPrice: Number(formData.entryPrice),
       initialStopPrice: Number(formData.initialStopPrice),
@@ -114,13 +144,17 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
       initialStopFinancial: formData.initialStopFinancial ? Number(formData.initialStopFinancial) : undefined,
       targetFinancial: formData.targetFinancial ? Number(formData.targetFinancial) : undefined,
       imageUrl,
+      annotatedImageUrl,
       canvasData
     });
   };
 
-  const handleAnnotatorChange = (url: string, elements: any[]) => {
+  const handleAnnotatorChange = (url: string, elements: any[], flattenedUrl?: string) => {
     setImageUrl(url);
     setCanvasData(JSON.stringify(elements));
+    if (flattenedUrl) {
+      setAnnotatedImageUrl(flattenedUrl);
+    }
   };
 
   return (
@@ -170,8 +204,34 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Estratégia</label>
-                <input type="text" name="strategy" value={formData.strategy} onChange={handleChange} placeholder="ex: Rompimento" className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                <label className="block text-sm font-medium text-slate-700 mb-1">Estratégia / Setup</label>
+                <div className="space-y-2">
+                  <select 
+                    required 
+                    name="strategy" 
+                    value={formData.strategy} 
+                    onChange={handleChange} 
+                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="">Selecione um setup</option>
+                    {(settings.setups || []).map((setup, idx) => (
+                      <option key={idx} value={setup}>{setup}</option>
+                    ))}
+                    <option value="Outros..">Outros..</option>
+                  </select>
+                  
+                  {isOtherStrategy && (
+                    <input 
+                      required
+                      type="text" 
+                      name="customStrategy" 
+                      value={formData.customStrategy} 
+                      onChange={handleChange} 
+                      placeholder="Nome do seu setup customizado" 
+                      className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none animate-in fade-in slide-in-from-top-1" 
+                    />
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Qtd (Contratos/Ações)</label>
