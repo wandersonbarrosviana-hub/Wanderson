@@ -13,6 +13,7 @@ export interface AppSettings {
   riskPerTradeLimit?: number;
   maxTradesPerDay?: number;
   setups?: string[];
+  assets?: string[];
 }
 
 export const DEFAULT_SETUPS = [
@@ -22,6 +23,22 @@ export const DEFAULT_SETUPS = [
   'Retorno/Pullback',
   'Barra elefante (a favor da tendência)',
   'Barra elefante (falha de continuação de tendência)'
+];
+
+export const DEFAULT_ASSETS = [
+  'HK (Hang Seng)', 
+  'USATEC', 
+  'DOW JONES', 
+  'AUS200', 
+  'MINI INDICE', 
+  'MINI DOLAR',
+  'AAPL (Apple)',
+  'TSLA (Tesla)',
+  'NVDA (NVIDIA)',
+  'MSFT (Microsoft)',
+  'AMZN (Amazon)',
+  'GOOGL (Alphabet)',
+  'META (Meta)'
 ];
 
 export type TradeDirection = 'Compra' | 'Venda';

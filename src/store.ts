@@ -1,4 +1,4 @@
-import { Trade, AppSettings, DEFAULT_SETUPS } from './types';
+import { Trade, AppSettings, DEFAULT_SETUPS, DEFAULT_ASSETS } from './types';
 
 const STORAGE_KEY = 'trading_diary_trades';
 const SETTINGS_KEY = 'trading_diary_settings';
@@ -27,6 +27,11 @@ export const getSettings = (): AppSettings => {
         needsSave = true;
       }
 
+      if (!parsed.assets) {
+        parsed.assets = [...DEFAULT_ASSETS];
+        needsSave = true;
+      }
+
       if (needsSave) {
         saveSettings(parsed);
       }
@@ -35,13 +40,15 @@ export const getSettings = (): AppSettings => {
     return { 
       initialBalance: 0, 
       accounts: [{ id: 'default', name: 'Conta Principal', initialBalance: 0 }],
-      setups: [...DEFAULT_SETUPS]
+      setups: [...DEFAULT_SETUPS],
+      assets: [...DEFAULT_ASSETS]
     };
   } catch (error) {
     return { 
       initialBalance: 0, 
       accounts: [{ id: 'default', name: 'Conta Principal', initialBalance: 0 }],
-      setups: [...DEFAULT_SETUPS]
+      setups: [...DEFAULT_SETUPS],
+      assets: [...DEFAULT_ASSETS]
     };
   }
 };

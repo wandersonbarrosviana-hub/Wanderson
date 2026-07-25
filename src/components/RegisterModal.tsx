@@ -23,6 +23,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     date: initialData?.date || new Date().toISOString().split('T')[0],
     time: initialData?.time || new Date().toTimeString().split(' ')[0],
     asset: initialData?.asset || '',
+    customAsset: '', // Added to handle "Outros" field
     direction: initialData?.direction || 'Compra',
     quantity: initialData?.quantity?.toString() || '',
     strategy: initialData?.strategy || '',
@@ -54,6 +55,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
   });
 
   const [isOtherStrategy, setIsOtherStrategy] = useState(false);
+  const [isOtherAsset, setIsOtherAsset] = useState(false);
 
   useEffect(() => {
     if (initialData?.strategy && settings.setups) {
@@ -68,6 +70,20 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
       }
     }
   }, [initialData, settings.setups]);
+
+  useEffect(() => {
+    if (initialData?.asset && settings.assets) {
+      const isPredefined = settings.assets.includes(initialData.asset);
+      if (!isPredefined) {
+        setIsOtherAsset(true);
+        setFormData(prev => ({ 
+          ...prev, 
+          asset: 'Outros..',
+          customAsset: initialData.asset || ''
+        }));
+      }
+    }
+  }, [initialData, settings.assets]);
 
   // Once accounts are loaded, set a default accountId if not editing an existing trade
   useEffect(() => {
@@ -104,6 +120,14 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
         setIsOtherStrategy(false);
       }
     }
+
+    if (name === 'asset') {
+      if (value === 'Outros..') {
+        setIsOtherAsset(true);
+      } else {
+        setIsOtherAsset(false);
+      }
+    }
     
     setFormData(prev => ({ ...prev, [name]: val }));
   };
@@ -112,12 +136,13 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     e.preventDefault();
     
     const finalStrategy = formData.strategy === 'Outros..' ? formData.customStrategy : formData.strategy;
+    const finalAsset = formData.asset === 'Outros..' ? formData.customAsset : formData.asset;
 
     onSave({
       accountId: formData.accountId,
       date: formData.date,
       time: formData.time,
-      asset: formData.asset,
+      asset: finalAsset,
       direction: formData.direction as any,
       quantity: formData.quantity ? Number(formData.quantity) : undefined,
       strategy: finalStrategy,
@@ -193,7 +218,33 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Ativo Operado</label>
-                <input required type="text" name="asset" value={formData.asset} onChange={handleChange} placeholder="ex: WINV23, EURUSD" className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                <div className="space-y-2">
+                  <select 
+                    required 
+                    name="asset" 
+                    value={formData.asset} 
+                    onChange={handleChange} 
+                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="">Selecione um ativo</option>
+                    {(settings.assets || []).map((asset, idx) => (
+                      <option key={idx} value={asset}>{asset}</option>
+                    ))}
+                    <option value="Outros..">Outros..</option>
+                  </select>
+                  
+                  {isOtherAsset && (
+                    <input 
+                      required
+                      type="text" 
+                      name="customAsset" 
+                      value={formData.customAsset} 
+                      onChange={handleChange} 
+                      placeholder="Nome do ativo customizado" 
+                      className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none animate-in fade-in slide-in-from-top-1" 
+                    />
+                  )}
+                </div>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Timeframe</label>

@@ -75,11 +75,40 @@ export function Settings() {
     setSaved(false);
   };
 
+  const handleAddAsset = () => {
+    const newAsset = "";
+    setSettings({
+      ...settings,
+      assets: [...(settings.assets || []), newAsset]
+    });
+    setSaved(false);
+  };
+
+  const handleUpdateAsset = (index: number, value: string) => {
+    const newAssets = [...(settings.assets || [])];
+    newAssets[index] = value;
+    setSettings({
+      ...settings,
+      assets: newAssets
+    });
+    setSaved(false);
+  };
+
+  const handleRemoveAsset = (index: number) => {
+    const newAssets = (settings.assets || []).filter((_, i) => i !== index);
+    setSettings({
+      ...settings,
+      assets: newAssets
+    });
+    setSaved(false);
+  };
+
   const handleSave = async () => {
-    // Filter out empty setups before saving
+    // Filter out empty setups and assets before saving
     const cleanedSettings = {
       ...settings,
-      setups: (settings.setups || []).filter(s => s.trim() !== '')
+      setups: (settings.setups || []).filter(s => s.trim() !== ''),
+      assets: (settings.assets || []).filter(a => a.trim() !== '')
     };
     await updateSettings(cleanedSettings);
     setSettings(cleanedSettings);
@@ -219,6 +248,47 @@ export function Settings() {
             {(settings.setups || []).length === 0 && (
               <p className="text-center py-4 text-slate-400 italic text-sm border-2 border-dashed border-slate-100 rounded-lg">
                 Nenhum setup cadastrado.
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Assets Section */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-800">Ativos Predefinidos</h2>
+            <button
+              onClick={handleAddAsset}
+              className="flex items-center gap-1 text-blue-600 hover:text-blue-700 text-sm font-medium transition-colors"
+            >
+              <Plus size={16} />
+              Adicionar Ativo
+            </button>
+          </div>
+          <p className="text-sm text-slate-500 mb-4">Estes ativos aparecerão no seletor ao registrar uma nova operação.</p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {(settings.assets || []).map((asset, index) => (
+              <div key={index} className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={asset}
+                  onChange={(e) => handleUpdateAsset(index, e.target.value)}
+                  className="flex-1 rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  placeholder="Nome do ativo..."
+                />
+                <button
+                  onClick={() => handleRemoveAsset(index)}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                  title="Remover Ativo"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            ))}
+            {(settings.assets || []).length === 0 && (
+              <p className="col-span-full text-center py-4 text-slate-400 italic text-sm border-2 border-dashed border-slate-100 rounded-lg">
+                Nenhum ativo cadastrado.
               </p>
             )}
           </div>

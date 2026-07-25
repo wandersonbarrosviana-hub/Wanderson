@@ -853,46 +853,48 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
       {/* Bar Chart */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 mt-6 [&_.recharts-wrapper]:outline-none [&_.recharts-surface]:outline-none [&_path]:outline-none [&_rect]:outline-none">
         <h3 className="text-lg font-semibold text-slate-800 mb-6">Resultado por Operação</h3>
-        <div className="h-[300px] w-full">
-          {barChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={barChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }} style={{ outline: 'none' }}>
-                <defs>
-                  <linearGradient id="colorGainBar" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#00f260" stopOpacity={1}/>
-                    <stop offset="100%" stopColor="#059669" stopOpacity={0.7}/>
-                  </linearGradient>
-                  <linearGradient id="colorLossBar" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#be123c" stopOpacity={0.7}/>
-                    <stop offset="100%" stopColor="#ff0844" stopOpacity={1}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} dy={10} />
-                <YAxis width={95} tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(val) => `$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
-                <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
-                <ReferenceLine y={0} stroke="#94a3b8" />
-                <Bar 
-                  dataKey="value" 
-                  radius={[8, 8, 8, 8]} 
-                  onClick={(data) => {
-                    if (data && data.payload && data.payload.originalTrade) {
-                      setViewTrade(data.payload.originalTrade);
-                    }
-                  }}
-                  style={{ cursor: 'pointer' }}
-                >
-                  {barChartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.value >= 0 ? 'url(#colorGainBar)' : 'url(#colorLossBar)'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="flex items-center justify-center h-full text-slate-400">
-              Sem dados para o período selecionado.
-            </div>
-          )}
+        <div className="w-full overflow-x-auto">
+          <div className="h-[300px]" style={{ minWidth: barChartData.length > 10 ? `${barChartData.length * 60}px` : '100%' }}>
+            {barChartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={barChartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }} style={{ outline: 'none' }}>
+                  <defs>
+                    <linearGradient id="colorGainBar" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#00f260" stopOpacity={1}/>
+                      <stop offset="100%" stopColor="#059669" stopOpacity={0.7}/>
+                    </linearGradient>
+                    <linearGradient id="colorLossBar" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#be123c" stopOpacity={0.7}/>
+                      <stop offset="100%" stopColor="#ff0844" stopOpacity={1}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} dy={10} />
+                  <YAxis width={95} tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(val) => `$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
+                  <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(226, 232, 240, 0.4)' }} />
+                  <ReferenceLine y={0} stroke="#94a3b8" />
+                  <Bar 
+                    dataKey="value" 
+                    radius={[8, 8, 8, 8]} 
+                    onClick={(data) => {
+                      if (data && data.payload && data.payload.originalTrade) {
+                        setViewTrade(data.payload.originalTrade);
+                      }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {barChartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.value >= 0 ? 'url(#colorGainBar)' : 'url(#colorLossBar)'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-400">
+                Sem dados para o período selecionado.
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
