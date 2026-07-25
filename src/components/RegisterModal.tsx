@@ -21,6 +21,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
   const [formData, setFormData] = useState({
     accountId: initialData?.accountId || '',
     date: initialData?.date || new Date().toISOString().split('T')[0],
+    time: initialData?.time || new Date().toTimeString().split(' ')[0],
     asset: initialData?.asset || '',
     direction: initialData?.direction || 'Compra',
     quantity: initialData?.quantity?.toString() || '',
@@ -115,6 +116,7 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     onSave({
       accountId: formData.accountId,
       date: formData.date,
+      time: formData.time,
       asset: formData.asset,
       direction: formData.direction as any,
       quantity: formData.quantity ? Number(formData.quantity) : undefined,
@@ -180,10 +182,14 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
                 ))}
               </select>
             </div>
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Data</label>
                 <input required type="date" name="date" value={formData.date} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Hora</label>
+                <input required type="time" step="1" name="time" value={formData.time} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Ativo Operado</label>

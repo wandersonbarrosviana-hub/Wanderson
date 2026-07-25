@@ -30,6 +30,7 @@ export interface Trade {
   id: string;
   accountId?: string; // Optional for backward compatibility
   date: string; // ISO String
+  time?: string; // HH:mm:ss
   asset: string;
   direction?: TradeDirection;
   strategy?: string;

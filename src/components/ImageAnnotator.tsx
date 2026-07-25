@@ -250,8 +250,8 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
       if (el.id === id) {
         return {
           ...el,
-          x: (node.x() - imagePos.x) / virtualScale,
-          y: (node.y() - imagePos.y) / virtualScale
+          x: node.x(),
+          y: node.y()
         };
       }
       return el;
@@ -275,8 +275,8 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
         if (el.type === 'rect') {
           return {
             ...el,
-            x: (node.x() - imagePos.x) / virtualScale,
-            y: (node.y() - imagePos.y) / virtualScale,
+            x: node.x(),
+            y: node.y(),
             width: (el.width || 0) * scaleX,
             height: (el.height || 0) * scaleY
           };
@@ -284,24 +284,24 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
         if (el.type === 'circle') {
           return {
             ...el,
-            x: (node.x() - imagePos.x) / virtualScale,
-            y: (node.y() - imagePos.y) / virtualScale,
+            x: node.x(),
+            y: node.y(),
             radius: (el.radius || 0) * Math.max(scaleX, scaleY)
           };
         }
         if (el.type === 'arrow') {
           return {
             ...el,
-            x: (node.x() - imagePos.x) / virtualScale,
-            y: (node.y() - imagePos.y) / virtualScale,
+            x: node.x(),
+            y: node.y(),
             points: (el.points || []).map((p, i) => i % 2 === 0 ? p * scaleX : p * scaleY)
           };
         }
         if (el.type === 'text') {
            return {
              ...el,
-             x: (node.x() - imagePos.x) / virtualScale,
-             y: (node.y() - imagePos.y) / virtualScale,
+             x: node.x(),
+             y: node.y(),
              fontSize: (el.fontSize || 20) * Math.max(scaleX, scaleY)
            };
         }

@@ -25,6 +25,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
   const [selectedAsset, setSelectedAsset] = useState<string>('all');
   const [selectedTrend, setSelectedTrend] = useState<string>('all');
   const [selectedPartial, setSelectedPartial] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'day' | 'hour'>('day');
   const [viewTrade, setViewTrade] = useState<Trade | null>(null);
   const [isChartHovered, setIsChartHovered] = useState(false);
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<string | null>(null);
@@ -75,7 +76,11 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
       const isPartial = selectedPartial === 'true';
       filtered = filtered.filter(t => t.isPartial === isPartial);
     }
-    return filtered.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return filtered.sort((a, b) => {
+      const dateA = new Date(`${a.date}T${a.time || '00:00:00'}`).getTime();
+      const dateB = new Date(`${b.date}T${b.time || '00:00:00'}`).getTime();
+      return dateA - dateB;
+    });
   }, [trades, startDate, endDate, selectedAccountId, accounts, selectedStrategy, selectedSentiment, selectedResultType, selectedAsset, selectedTrend, selectedPartial]);
 
   const uniqueStrategies = useMemo(() => {
@@ -185,7 +190,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
   }, [trades]);
 
   const chronologicalTrades = useMemo(() => {
-    return [...filteredTrades].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return filteredTrades;
   }, [filteredTrades]);
 
   const drawdownStats = useMemo(() => {
@@ -228,15 +233,23 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     }];
 
     const aggregated = chronologicalTrades.reduce((acc, t) => {
-      const dateStr = format(parseISO(t.date), 'dd/MM', { locale: ptBR });
-      if (!acc[dateStr]) {
-        acc[dateStr] = {
-          date: dateStr,
-          fullDate: format(parseISO(t.date), 'dd MMM yyyy', { locale: ptBR }),
+      let key = format(parseISO(t.date), 'dd/MM', { locale: ptBR });
+      let fullLabel = format(parseISO(t.date), 'dd MMM yyyy', { locale: ptBR });
+      
+      if (viewMode === 'hour') {
+        const timeStr = t.time || '00:00:00';
+        key = `${key} ${timeStr}`;
+        fullLabel = `${fullLabel} ${timeStr}`;
+      }
+
+      if (!acc[key]) {
+        acc[key] = {
+          date: key,
+          fullDate: fullLabel,
           value: 0
         };
       }
-      acc[dateStr].value += t.resultValue;
+      acc[key].value += t.resultValue;
       return acc;
     }, {} as Record<string, any>);
 
@@ -249,7 +262,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     });
     
     return data;
-  }, [filteredTrades, activeInitialBalance]);
+  }, [chronologicalTrades, activeInitialBalance, viewMode]);
 
   const consistencyScore = useMemo(() => {
     if (chartData.length < 2) return 0;
@@ -732,8 +745,40 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
       )}
 
       {/* Chart */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 [&_.recharts-wrapper]:outline-none [&_.recharts-surface]:outline-none [&_path]:outline-none [&_rect]:outline-none">
-        <h3 className="text-lg font-semibold text-slate-800 mb-6">Evolução do Patrimônio (Acumulado)</h3>
+      <div className="bg-slate-900 p-6 rounded-xl shadow-lg border border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <h3 className="text-lg font-bold text-white uppercase tracking-wider">Resultado</h3>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex bg-slate-800 p-1 rounded-lg">
+              <button
+                onClick={() => setViewMode('day')}
+                className={cn(
+                  "px-3 py-1 text-xs font-semibold rounded-md transition-all",
+                  viewMode === 'day' ? "bg-blue-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
+                )}
+              >
+                Dia
+              </button>
+              <button
+                onClick={() => setViewMode('hour')}
+                className={cn(
+                  "px-3 py-1 text-xs font-semibold rounded-md transition-all",
+                  viewMode === 'hour' ? "bg-blue-600 text-white shadow-sm" : "text-slate-400 hover:text-slate-200"
+                )}
+              >
+                Hora
+              </button>
+            </div>
+
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-slate-400 uppercase">Resultado Total</span>
+              <span className={`text-sm font-bold ${stats.netResult >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                R$ {stats.netResult.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          </div>
+        </div>
         <div 
           className="h-[400px] w-full"
           onMouseEnter={() => setIsChartHovered(true)}
@@ -743,60 +788,53 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart
                 data={chartData}
-                margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
                 style={{ outline: 'none' }}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} axisLine={false} dy={10} />
-                <YAxis width={95} domain={['dataMin', 'dataMax']} tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={(val) => `$ ${val.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                  formatter={(value: number) => [`$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Acumulado']}
-                  labelFormatter={(label, payload) => payload?.[0]?.payload?.fullDate || label}
-                />
-                <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
                 <defs>
-                  <filter id="waveFilter" x="-20%" y="-20%" width="140%" height="140%">
-                    <feTurbulence type="fractalNoise" baseFrequency={isChartHovered ? "0.01 0.03" : "0.005 0.01"} numOctaves="1" result="noise">
-                      <animate attributeName="baseFrequency" values={isChartHovered ? "0.01 0.03; 0.015 0.05; 0.01 0.03" : "0.005 0.01; 0.008 0.02; 0.005 0.01"} dur={isChartHovered ? "4s" : "10s"} repeatCount="indefinite" />
-                    </feTurbulence>
-                    <feDisplacementMap in="SourceGraphic" in2="noise" scale={isChartHovered ? "8" : "2"} xChannelSelector="R" yChannelSelector="G">
-                      <animate attributeName="scale" values={isChartHovered ? "4; 12; 4" : "1; 4; 1"} dur={isChartHovered ? "4s" : "10s"} repeatCount="indefinite" />
-                    </feDisplacementMap>
-                  </filter>
-                  <linearGradient id="splitColor" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset={off} stopColor="#00f260" stopOpacity={0.6} />
-                    <stop offset={off} stopColor="#ff0844" stopOpacity={0.6} />
-                  </linearGradient>
-                  <linearGradient id="splitColorStroke" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset={off} stopColor="#00f260" stopOpacity={1} />
-                    <stop offset={off} stopColor="#ff0844" stopOpacity={1} />
+                  <linearGradient id="colorEquity" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <Area 
-                  type="natural" 
-                  dataKey="cumulative" 
-                  stroke="none" 
-                  fill="url(#splitColor)" 
-                  style={{ filter: 'url(#waveFilter)' }}
-                  animationDuration={2500}
-                  animationEasing="ease-in-out"
-                  activeDot={false}
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#1e293b" />
+                <XAxis 
+                  dataKey="date" 
+                  tick={{ fill: '#64748b', fontSize: 11 }} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  dy={10} 
                 />
+                <YAxis 
+                  orientation="right"
+                  width={80} 
+                  domain={['auto', 'auto']} 
+                  tick={{ fill: '#64748b', fontSize: 10 }} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  tickFormatter={(val) => `R$ ${val >= 1000 ? (val/1000).toFixed(1) + 'k' : val.toLocaleString('pt-BR')}`} 
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px', color: '#fff' }}
+                  itemStyle={{ color: '#10b981' }}
+                  formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Saldo']}
+                  labelFormatter={(label, payload) => payload?.[0]?.payload?.fullDate || label}
+                />
+                <ReferenceLine y={0} stroke="#475569" strokeWidth={2} />
                 <Area 
-                  type="natural" 
+                  type="monotone" 
                   dataKey="cumulative" 
-                  stroke="url(#splitColorStroke)" 
-                  fill="none" 
+                  stroke="#10b981" 
                   strokeWidth={3}
-                  animationDuration={2500}
-                  animationEasing="ease-in-out"
-                  activeDot={{ r: 6, fill: '#0ea5e9', stroke: '#fff', strokeWidth: 2 }}
+                  fillOpacity={1} 
+                  fill="url(#colorEquity)"
+                  animationDuration={2000}
+                  activeDot={{ r: 5, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-             <div className="flex items-center justify-center h-full text-slate-400">
+             <div className="flex items-center justify-center h-full text-slate-500 italic">
                 Sem dados para o período selecionado.
              </div>
           )}
