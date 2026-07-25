@@ -169,8 +169,15 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
   }, [filteredTrades, activeInitialBalance]);
 
   const riskStats = useMemo(() => {
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const dailyTrades = trades.filter(t => t.date.startsWith(today));
+    const targetDate = startDate || format(new Date(), 'yyyy-MM-dd');
+    
+    const dailyTrades = trades.filter(t => {
+      const matchesAccount = selectedAccountId === 'all' || 
+                            t.accountId === selectedAccountId || 
+                            (!t.accountId && accounts[0]?.id === selectedAccountId);
+                            
+      return t.date.startsWith(targetDate) && matchesAccount;
+    });
     
     const dailyLoss = dailyTrades
       .filter(t => t.resultValue < 0)
@@ -185,9 +192,11 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     return {
       dailyLoss,
       maxDailyTradeLoss,
-      tradeCount
+      tradeCount,
+      isSpecificDate: !!startDate,
+      targetDate
     };
-  }, [trades]);
+  }, [trades, startDate, selectedAccountId, accounts]);
 
   const chronologicalTrades = useMemo(() => {
     return filteredTrades;
@@ -634,7 +643,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {settings.dailyRiskLimit ? (
           <StatCard 
-            title="Risco Diário (Loss Hoje)" 
+            title={`Risco Diário (${riskStats.isSpecificDate ? format(parseISO(riskStats.targetDate), 'dd/MM') : 'Hoje'})`} 
             value={riskStats.dailyLoss} 
             isCurrency 
             icon={<Shield size={20} />} 
@@ -655,7 +664,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
 
         {settings.riskPerTradeLimit ? (
           <StatCard 
-            title="Maior Stop do Dia" 
+            title={`Maior Stop (${riskStats.isSpecificDate ? format(parseISO(riskStats.targetDate), 'dd/MM') : 'do Dia'})`} 
             value={riskStats.maxDailyTradeLoss} 
             isCurrency 
             icon={<TrendingDown size={20} />} 
@@ -676,7 +685,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
 
         {settings.maxTradesPerDay ? (
           <StatCard 
-            title="Operações Hoje" 
+            title={`Operações (${riskStats.isSpecificDate ? format(parseISO(riskStats.targetDate), 'dd/MM') : 'Hoje'})`} 
             value={riskStats.tradeCount} 
             icon={<ListChecks size={20} />} 
             valueColor={
