@@ -68,6 +68,8 @@ export interface Trade {
   ratingManagement?: number;
   ratingEmotionalControl?: number;
   timeframe?: string;
+  madeError?: boolean;
+  errorDetails?: string;
   evalFollowedPlan?: boolean;
   evalRespectedSetup?: boolean;
   evalImpulseEntry?: boolean;

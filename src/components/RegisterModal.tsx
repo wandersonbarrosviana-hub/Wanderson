@@ -50,6 +50,8 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     evalImpulseEntry: initialData?.evalImpulseEntry ?? false,
     evalMovedStop: initialData?.evalMovedStop ?? false,
     evalEarlyProfit: initialData?.evalEarlyProfit ?? false,
+    madeError: initialData?.madeError ?? false,
+    errorDetails: initialData?.errorDetails || '',
     initialStopFinancial: initialData?.initialStopFinancial?.toString() || '',
     targetFinancial: initialData?.targetFinancial?.toString() || '',
   });
@@ -168,6 +170,8 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
       evalImpulseEntry: formData.evalImpulseEntry,
       evalMovedStop: formData.evalMovedStop,
       evalEarlyProfit: formData.evalEarlyProfit,
+      madeError: formData.madeError,
+      errorDetails: formData.errorDetails,
       initialStopFinancial: formData.initialStopFinancial ? Number(formData.initialStopFinancial) : undefined,
       targetFinancial: formData.targetFinancial ? Number(formData.targetFinancial) : undefined,
       imageUrl,
@@ -248,7 +252,18 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Timeframe</label>
-                <input type="text" name="timeframe" value={formData.timeframe} onChange={handleChange} placeholder="ex: M5, H1, D1" className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                <select name="timeframe" value={formData.timeframe} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                  <option value="">Selecione</option>
+                  <option value="1 minuto">1 minuto</option>
+                  <option value="2 minutos">2 minutos</option>
+                  <option value="5 minutos">5 minutos</option>
+                  <option value="10 minutos">10 minutos</option>
+                  <option value="30 minutos">30 minutos</option>
+                  <option value="60 minutos">60 minutos</option>
+                  <option value="1 dia">1 dia</option>
+                  <option value="1 mês">1 mês</option>
+                  <option value="1 ano">1 ano</option>
+                </select>
               </div>
             </div>
 
@@ -353,6 +368,19 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Sentimento durante a operação</label>
               <input required type="text" name="sentiment" value={formData.sentiment} onChange={handleChange} placeholder="ex: Confiante, Ansioso, Fomo..." className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="madeError" name="madeError" checked={formData.madeError} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                <label htmlFor="madeError" className="text-sm font-medium text-slate-700">Cometeu erros?</label>
+              </div>
+
+              {formData.madeError && (
+                <div>
+                  <textarea name="errorDetails" value={formData.errorDetails} onChange={handleChange} rows={2} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Qual erro cometeu?"></textarea>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2 mt-2">

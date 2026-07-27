@@ -120,6 +120,8 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     
     const avgGain = gains.length ? totalGains / gains.length : 0;
     const avgLoss = losses.length ? totalLoss / losses.length : 0;
+    
+    const payoff = avgLoss !== 0 ? avgGain / Math.abs(avgLoss) : (avgGain > 0 ? avgGain : 0);
 
     let currentConsecutiveGains = 0;
     let maxConsecutiveGains = 0;
@@ -165,7 +167,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
 
     const roi = activeInitialBalance > 0 ? (netResult / activeInitialBalance) * 100 : 0;
 
-    return { totalGains, totalLoss, netResult, maxGain, maxLoss, avgGain, avgLoss, winRate: filteredTrades.length ? (gains.length / filteredTrades.length) * 100 : 0, roi, totalTrades: filteredTrades.length, maxConsecutiveGains, maxConsecutiveLosses, avgRiskReward };
+    return { totalGains, totalLoss, netResult, maxGain, maxLoss, avgGain, avgLoss, payoff, winRate: filteredTrades.length ? (gains.length / filteredTrades.length) * 100 : 0, roi, totalTrades: filteredTrades.length, maxConsecutiveGains, maxConsecutiveLosses, avgRiskReward };
   }, [filteredTrades, activeInitialBalance]);
 
   const riskStats = useMemo(() => {
@@ -710,6 +712,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
         <StatCard title="Maior Loss" value={stats.maxLoss} icon={<TrendingDown size={20} />} isCurrency valueColor="text-red-600" />
         <StatCard title="Média Gain" value={stats.avgGain} icon={<Activity size={20} />} isCurrency valueColor="text-emerald-600" />
         <StatCard title="Média Loss" value={stats.avgLoss} icon={<Activity size={20} />} isCurrency valueColor="text-red-600" />
+        <StatCard title="Payoff" value={stats.payoff > 0 ? `${stats.payoff.toFixed(2)}%` : '-'} icon={<Activity size={20} />} isStringValue valueColor={stats.payoff >= 1 ? 'text-emerald-600' : 'text-red-600'} />
         <StatCard title="Risco/Retorno (Médio)" value={stats.avgRiskReward > 0 ? `1:${stats.avgRiskReward.toFixed(2)}` : '-'} icon={<Activity size={20} />} isStringValue />
         <StatCard title="Seq. Gains (Máx)" value={stats.maxConsecutiveGains} icon={<TrendingUp size={20} />} valueColor="text-emerald-600" />
         <StatCard title="Seq. Loss (Máx)" value={stats.maxConsecutiveLosses} icon={<TrendingDown size={20} />} valueColor="text-red-600" />
