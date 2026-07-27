@@ -71,7 +71,7 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
   const [textInput, setTextInput] = useState<{ visible: boolean, x: number, y: number, value: string, id: string | null }>({ visible: false, x: 0, y: 0, value: '', id: null });
   const stageRef = useRef<any>(null);
   const trRef = useRef<any>(null);
-  const textInputRef = useRef<HTMLInputElement>(null);
+  const textInputRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
 
@@ -302,7 +302,9 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
              ...el,
              x: node.x(),
              y: node.y(),
-             fontSize: (el.fontSize || 20) * Math.max(scaleX, scaleY)
+             fontSize: node.fontSize(),
+             width: node.width(),
+             height: node.height()
            };
         }
       }
@@ -522,16 +524,32 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
           </button>
         )}
         {textInput.visible && !readOnly && (
-          <input
+          <textarea
             ref={textInputRef}
-            className="absolute z-10 px-1 border-2 border-blue-500 rounded text-red-500 text-xl bg-transparent outline-none"
-            style={{ top: textInput.y, left: textInput.x, minWidth: '150px' }}
+            className="absolute z-10 p-2 border-2 border-blue-500 rounded text-xl bg-white/90 outline-none resize-both shadow-lg"
+            style={{ 
+              top: textInput.y, 
+              left: textInput.x, 
+              minWidth: '150px',
+              minHeight: '40px',
+              color: selectedColor,
+              whiteSpace: 'pre-wrap',
+              overflow: 'hidden'
+            }}
             value={textInput.value}
-            onChange={(e) => setTextInput({ ...textInput, value: e.target.value })}
+            onChange={(e) => {
+              setTextInput({ ...textInput, value: e.target.value });
+              if (textInputRef.current) {
+                textInputRef.current.style.height = 'auto';
+                textInputRef.current.style.height = textInputRef.current.scrollHeight + 'px';
+              }
+            }}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                if (textInput.value) {
-                  const newEl: Element = { id: textInput.id!, type: 'text', x: (textInput.x - imagePos.x) / virtualScale, y: (textInput.y - imagePos.y) / virtualScale, text: textInput.value, fill: selectedColor, fontSize: 20 };
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (textInput.value.trim()) {
+                  const width = textInputRef.current ? (textInputRef.current.offsetWidth / virtualScale) : undefined;
+                  const newEl: Element = { id: textInput.id!, type: 'text', x: (textInput.x - imagePos.x) / virtualScale, y: (textInput.y - imagePos.y) / virtualScale, text: textInput.value, fill: selectedColor, fontSize: 20, width };
                   const newElements = [...elements, newEl];
                   setElements(newElements);
                   setTimeout(() => {
@@ -549,8 +567,9 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
               }
             }}
             onBlur={() => {
-              if (textInput.value) {
-                  const newEl: Element = { id: textInput.id!, type: 'text', x: (textInput.x - imagePos.x) / virtualScale, y: (textInput.y - imagePos.y) / virtualScale, text: textInput.value, fill: selectedColor, fontSize: 20 };
+              if (textInput.value.trim()) {
+                  const width = textInputRef.current ? (textInputRef.current.offsetWidth / virtualScale) : undefined;
+                  const newEl: Element = { id: textInput.id!, type: 'text', x: (textInput.x - imagePos.x) / virtualScale, y: (textInput.y - imagePos.y) / virtualScale, text: textInput.value, fill: selectedColor, fontSize: 20, width };
                   const newElements = [...elements, newEl];
                   setElements(newElements);
                   setTimeout(() => {
@@ -599,6 +618,36 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
                     draggable: !readOnly && isSelected,
                     onClick: () => !readOnly && setSelectedId(el.id),
                     onTap: () => !readOnly && setSelectedId(el.id),
+                    onDblClick: (e: any) => {
+                      if (!readOnly && el.type === 'text') {
+                        const node = e.target;
+                        const textPosition = node.absolutePosition();
+                        setTextInput({
+                          visible: true,
+                          x: textPosition.x,
+                          y: textPosition.y,
+                          value: el.text || '',
+                          id: el.id
+                        });
+                        setElements(elements.filter(e => e.id !== el.id));
+                        setSelectedId(null);
+                      }
+                    },
+                    onDblTap: (e: any) => {
+                      if (!readOnly && el.type === 'text') {
+                        const node = e.target;
+                        const textPosition = node.absolutePosition();
+                        setTextInput({
+                          visible: true,
+                          x: textPosition.x,
+                          y: textPosition.y,
+                          value: el.text || '',
+                          id: el.id
+                        });
+                        setElements(elements.filter(e => e.id !== el.id));
+                        setSelectedId(null);
+                      }
+                    },
                     onDragEnd: (e: any) => handleDragEnd(e, el.id),
                     onTransformEnd: (e: any) => handleTransformEnd(e, el.id),
                     strokeWidth: 4 / virtualScale,
@@ -614,7 +663,40 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
                     return <Arrow key={el.id} {...commonProps} points={el.points || []} stroke={el.stroke} fill={el.stroke} dash={el.dash} pointerLength={15 / virtualScale} pointerWidth={15 / virtualScale} />;
                   }
                   if (el.type === 'text') {
-                    return <Text key={el.id} {...commonProps} text={el.text} fill={el.fill} fontSize={el.fontSize || 20} />;
+                    return (
+                      <Text 
+                        key={el.id} 
+                        {...commonProps} 
+                        text={el.text} 
+                        fill={el.fill} 
+                        fontSize={el.fontSize || 20} 
+                        width={el.width}
+                        height={el.height}
+                        onTransform={(e: any) => {
+                          const node = e.target;
+                          const scaleX = node.scaleX();
+                          const scaleY = node.scaleY();
+                          
+                          node.scaleX(1);
+                          node.scaleY(1);
+
+                          const newWidth = Math.max(node.width() * scaleX, 20);
+                          const newHeight = Math.max(node.height() * scaleY, 20);
+
+                          if (scaleX !== 1 && scaleY === 1) {
+                            // Dragging sides: change width only
+                            node.width(newWidth);
+                          } else if (scaleX === 1 && scaleY !== 1) {
+                            // Dragging top/bottom: change height only
+                            node.height(newHeight);
+                          } else {
+                            // Dragging corners: change font size and width proportionally
+                            node.width(newWidth);
+                            node.fontSize(Math.max(node.fontSize() * scaleY, 10));
+                          }
+                        }}
+                      />
+                    );
                   }
                   return null;
                 })}
@@ -630,6 +712,7 @@ export function ImageAnnotator({ imageUrl, initialElements = [], onChange, readO
                   }}
                   anchorSize={12}
                   rotateAnchorOffset={25}
+                  enabledAnchors={['top-left', 'top-center', 'top-right', 'middle-right', 'bottom-right', 'bottom-center', 'bottom-left', 'middle-left']}
                 />
               )}
             </Layer>
