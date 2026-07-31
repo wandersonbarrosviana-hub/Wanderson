@@ -81,4 +81,6 @@ export interface Trade {
   imageUrl?: string;
   annotatedImageUrl?: string;
   canvasData?: string; // Serialized Konva data
+  isNoTradeDay?: boolean;
+  noTradeReason?: string;
 }

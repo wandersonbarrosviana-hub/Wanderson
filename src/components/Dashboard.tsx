@@ -108,8 +108,9 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
   }, [trades]);
 
   const stats = useMemo(() => {
-    const gains = filteredTrades.filter(t => t.resultValue > 0);
-    const losses = filteredTrades.filter(t => t.resultValue < 0);
+    const actualTrades = filteredTrades.filter(t => !t.isNoTradeDay);
+    const gains = actualTrades.filter(t => t.resultValue > 0);
+    const losses = actualTrades.filter(t => t.resultValue < 0);
     
     const totalGains = gains.reduce((acc, curr) => acc + curr.resultValue, 0);
     const totalLoss = losses.reduce((acc, curr) => acc + curr.resultValue, 0); // This will be negative
@@ -131,7 +132,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     let totalRR = 0;
     let rrCount = 0;
 
-    filteredTrades.forEach(t => {
+    actualTrades.forEach(t => {
       if (t.resultValue > 0) {
         currentConsecutiveGains++;
         currentConsecutiveLosses = 0;
@@ -167,7 +168,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
 
     const roi = activeInitialBalance > 0 ? (netResult / activeInitialBalance) * 100 : 0;
 
-    return { totalGains, totalLoss, netResult, maxGain, maxLoss, avgGain, avgLoss, payoff, winRate: filteredTrades.length ? (gains.length / filteredTrades.length) * 100 : 0, roi, totalTrades: filteredTrades.length, maxConsecutiveGains, maxConsecutiveLosses, avgRiskReward };
+    return { totalGains, totalLoss, netResult, maxGain, maxLoss, avgGain, avgLoss, payoff, winRate: actualTrades.length ? (gains.length / actualTrades.length) * 100 : 0, roi, totalTrades: actualTrades.length, maxConsecutiveGains, maxConsecutiveLosses, avgRiskReward };
   }, [filteredTrades, activeInitialBalance]);
 
   const riskStats = useMemo(() => {
@@ -368,7 +369,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     const maxDate = sortedDates[sortedDates.length - 1];
     
     // Group by month
-    const months: { monthDate: Date; days: { date: Date; result: number; percentage: number; count: number }[] }[] = [];
+    const months: { monthDate: Date; days: { date: Date; result: number; percentage: number; count: number; hasNoTrade?: boolean; noTradeReason?: string }[] }[] = [];
     
     let currentMonthStart = startOfMonth(minDate);
     const endMonthStart = startOfMonth(maxDate);
@@ -394,11 +395,15 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
         const dayStartBalance = activeInitialBalance + prevSum;
         const percentage = dayStartBalance > 0 ? (result / dayStartBalance) * 100 : 0;
         
+        const hasNoTrade = dayTrades.some(t => t.isNoTradeDay);
+        
         return {
           date: day,
           result,
           percentage,
-          count: dayTrades.length
+          count: dayTrades.length,
+          hasNoTrade,
+          noTradeReason: hasNoTrade ? dayTrades.find(t => t.isNoTradeDay)?.noTradeReason : undefined
         };
       });
       
@@ -986,7 +991,10 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
                     let bgColor = 'bg-slate-50';
                     let textColor = 'text-slate-500';
                     if (day.count > 0) {
-                      if (day.result > 0) {
+                      if (day.hasNoTrade) {
+                        bgColor = 'bg-amber-100 hover:bg-amber-200';
+                        textColor = 'text-amber-800';
+                      } else if (day.result > 0) {
                         bgColor = 'bg-emerald-100 hover:bg-emerald-200';
                         textColor = 'text-emerald-800';
                       } else if (day.result < 0) {
@@ -1009,7 +1017,7 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
                         }}
                       >
                         <span className="absolute top-1 left-2 text-xs font-semibold text-slate-400">{format(day.date, 'd')}</span>
-                        {day.count > 0 && (
+                        {day.count > 0 && !day.hasNoTrade && (
                           <div className={cn("text-center flex flex-col items-center justify-center w-full", textColor)}>
                             <span className="font-bold text-sm">
                               {day.result >= 0 ? '+' : '-'}${Math.abs(day.result).toFixed(2)}
@@ -1020,6 +1028,11 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
                             <span className="text-[10px] bg-white/50 px-1 rounded mt-1">
                               {day.count} op{day.count > 1 ? 's' : ''}
                             </span>
+                          </div>
+                        )}
+                        {day.hasNoTrade && (
+                          <div className={cn("text-center flex flex-col items-center justify-center w-full mt-2", textColor)}>
+                             <span className="font-bold text-xs">Sem operações</span>
                           </div>
                         )}
                       </div>
@@ -1045,33 +1058,47 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
               <div className="space-y-4">
                 {filteredTrades.filter(t => t.date === selectedCalendarDate).map(trade => (
                   <div key={trade.id} className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm flex items-center justify-between cursor-pointer hover:border-blue-400 transition-colors" onClick={() => { setViewTrade(trade); setSelectedCalendarDate(null); }}>
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-slate-800">{trade.asset}</span>
-                        <span className={cn(
-                          "text-xs px-2 py-0.5 rounded-full font-medium",
-                          trade.direction === 'Compra' ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"
-                        )}>{trade.direction || 'Compra'}</span>
-                        <span className={cn(
-                          "text-xs px-2 py-0.5 rounded-full font-medium",
-                          trade.resultType === 'Gain' ? "bg-emerald-100 text-emerald-700" :
-                          trade.resultType === 'Loss' ? "bg-red-100 text-red-700" :
-                          "bg-slate-100 text-slate-700"
-                        )}>{trade.resultType}</span>
+                    {trade.isNoTradeDay ? (
+                      <div className="w-full">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold text-slate-800">Sem operações</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-800">No Trade</span>
+                        </div>
+                        <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded-lg border border-slate-100 italic">
+                          "{trade.noTradeReason || trade.description}"
+                        </div>
                       </div>
-                      <div className="text-sm text-slate-500">
-                        Entrada: {trade.entryPrice} | Saída: {trade.exitPrice}
-                      </div>
-                      {trade.strategy && (
-                         <div className="text-xs text-slate-400 mt-1">Estratégia: {trade.strategy}</div>
-                      )}
-                    </div>
-                    <div className={cn(
-                      "text-lg font-bold",
-                      trade.resultValue >= 0 ? "text-emerald-600" : "text-red-600"
-                    )}>
-                      {trade.resultValue >= 0 ? '+' : '-'}${Math.abs(trade.resultValue).toFixed(2)}
-                    </div>
+                    ) : (
+                      <>
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-semibold text-slate-800">{trade.asset}</span>
+                            <span className={cn(
+                              "text-xs px-2 py-0.5 rounded-full font-medium",
+                              trade.direction === 'Compra' ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"
+                            )}>{trade.direction || 'Compra'}</span>
+                            <span className={cn(
+                              "text-xs px-2 py-0.5 rounded-full font-medium",
+                              trade.resultType === 'Gain' ? "bg-emerald-100 text-emerald-700" :
+                              trade.resultType === 'Loss' ? "bg-red-100 text-red-700" :
+                              "bg-slate-100 text-slate-700"
+                            )}>{trade.resultType}</span>
+                          </div>
+                          <div className="text-sm text-slate-500">
+                            Entrada: {trade.entryPrice} | Saída: {trade.exitPrice}
+                          </div>
+                          {trade.strategy && (
+                             <div className="text-xs text-slate-400 mt-1">Estratégia: {trade.strategy}</div>
+                          )}
+                        </div>
+                        <div className={cn(
+                          "text-lg font-bold",
+                          trade.resultValue >= 0 ? "text-emerald-600" : "text-red-600"
+                        )}>
+                          {trade.resultValue >= 0 ? '+' : '-'}${Math.abs(trade.resultValue).toFixed(2)}
+                        </div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

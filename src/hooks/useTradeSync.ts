@@ -52,6 +52,18 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
   throw new Error(JSON.stringify(errInfo));
 }
 
+const sanitizeData = (data: any) => {
+  const sanitized: any = {};
+  Object.keys(data).forEach(key => {
+    if (data[key] !== undefined) {
+      sanitized[key] = data[key];
+    } else {
+      sanitized[key] = null;
+    }
+  });
+  return sanitized;
+};
+
 export const useTradeSync = () => {
   const { user } = useAuth();
   const [trades, setTrades] = useState<Trade[]>([]);
@@ -120,12 +132,12 @@ export const useTradeSync = () => {
             const batch = writeBatch(db);
             
             // Save settings
-            batch.set(settingsDoc, localSettings);
+            batch.set(settingsDoc, sanitizeData(localSettings));
             
             // Save trades
             localTrades.forEach(trade => {
               const tradeDoc = doc(db, 'users', user.uid, 'trades', trade.id);
-              batch.set(tradeDoc, trade);
+              batch.set(tradeDoc, sanitizeData(trade));
             });
 
             await batch.commit();
@@ -144,7 +156,7 @@ export const useTradeSync = () => {
       const path = `users/${user.uid}/trades/${trade.id}`;
       try {
         const tradeDoc = doc(db, path);
-        await setDoc(tradeDoc, trade);
+        await setDoc(tradeDoc, sanitizeData(trade));
       } catch (error) {
         handleFirestoreError(error, OperationType.WRITE, path);
       }
@@ -156,7 +168,7 @@ export const useTradeSync = () => {
       const path = `users/${user.uid}/trades/${trade.id}`;
       try {
         const tradeDoc = doc(db, path);
-        await setDoc(tradeDoc, trade);
+        await setDoc(tradeDoc, sanitizeData(trade));
       } catch (error) {
         handleFirestoreError(error, OperationType.WRITE, path);
       }
@@ -180,7 +192,7 @@ export const useTradeSync = () => {
       const path = `users/${user.uid}`;
       try {
         const settingsDoc = doc(db, path);
-        await setDoc(settingsDoc, newSettings);
+        await setDoc(settingsDoc, sanitizeData(newSettings));
       } catch (error) {
         handleFirestoreError(error, OperationType.WRITE, path);
       }

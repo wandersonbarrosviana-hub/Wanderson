@@ -54,6 +54,8 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     errorDetails: initialData?.errorDetails || '',
     initialStopFinancial: initialData?.initialStopFinancial?.toString() || '',
     targetFinancial: initialData?.targetFinancial?.toString() || '',
+    isNoTradeDay: initialData?.isNoTradeDay ?? false,
+    noTradeReason: initialData?.noTradeReason || '',
   });
 
   const [isOtherStrategy, setIsOtherStrategy] = useState(false);
@@ -143,22 +145,22 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
     onSave({
       accountId: formData.accountId,
       date: formData.date,
-      time: formData.time,
-      asset: finalAsset,
+      time: formData.time || '',
+      asset: finalAsset || '',
       direction: formData.direction as any,
       quantity: formData.quantity ? Number(formData.quantity) : undefined,
-      strategy: finalStrategy,
+      strategy: finalStrategy || '',
       trend: formData.trend as any,
-      entryPrice: Number(formData.entryPrice),
-      initialStopPrice: Number(formData.initialStopPrice),
-      targetPrice: Number(formData.targetPrice),
-      exitPrice: Number(formData.exitPrice),
-      resultType: formData.resultType as TradeResultType,
-      sentiment: formData.sentiment,
+      entryPrice: Number(formData.entryPrice) || 0,
+      initialStopPrice: Number(formData.initialStopPrice) || 0,
+      targetPrice: Number(formData.targetPrice) || 0,
+      exitPrice: Number(formData.exitPrice) || 0,
+      resultType: (formData.resultType as TradeResultType) || '0x0',
+      sentiment: formData.sentiment || '',
       isPartial: formData.isPartial,
-      partialRationale: formData.partialRationale,
-      description: formData.description,
-      resultValue: Number(formData.resultValue),
+      partialRationale: formData.partialRationale || '',
+      description: formData.description || '',
+      resultValue: Number(formData.resultValue) || 0,
       ratingEntryQuality: formData.ratingEntryQuality ? Number(formData.ratingEntryQuality) : undefined,
       ratingDiscipline: formData.ratingDiscipline ? Number(formData.ratingDiscipline) : undefined,
       ratingExecution: formData.ratingExecution ? Number(formData.ratingExecution) : undefined,
@@ -176,7 +178,9 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
       targetFinancial: formData.targetFinancial ? Number(formData.targetFinancial) : undefined,
       imageUrl,
       annotatedImageUrl,
-      canvasData
+      canvasData,
+      isNoTradeDay: formData.isNoTradeDay,
+      noTradeReason: formData.noTradeReason
     });
   };
 
@@ -211,243 +215,271 @@ export function RegisterModal({ onClose, onSave, initialData }: RegisterModalPro
                 ))}
               </select>
             </div>
+
+            <div className="flex items-center gap-2 mb-4 bg-slate-50 p-3 rounded-lg border border-slate-200">
+              <input 
+                type="checkbox" 
+                id="isNoTradeDay" 
+                name="isNoTradeDay" 
+                checked={formData.isNoTradeDay} 
+                onChange={handleChange} 
+                className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" 
+              />
+              <label htmlFor="isNoTradeDay" className="text-sm font-medium text-slate-800">Registrar Dia Sem Operações</label>
+            </div>
+
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Data</label>
                 <input required type="date" name="date" value={formData.date} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Hora</label>
-                <input required type="time" step="1" name="time" value={formData.time} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Ativo Operado</label>
-                <div className="space-y-2">
-                  <select 
-                    required 
-                    name="asset" 
-                    value={formData.asset} 
-                    onChange={handleChange} 
-                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="">Selecione um ativo</option>
-                    {(settings.assets || []).map((asset, idx) => (
-                      <option key={idx} value={asset}>{asset}</option>
-                    ))}
-                    <option value="Outros..">Outros..</option>
-                  </select>
-                  
-                  {isOtherAsset && (
-                    <input 
-                      required
-                      type="text" 
-                      name="customAsset" 
-                      value={formData.customAsset} 
-                      onChange={handleChange} 
-                      placeholder="Nome do ativo customizado" 
-                      className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none animate-in fade-in slide-in-from-top-1" 
-                    />
-                  )}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Timeframe</label>
-                <select name="timeframe" value={formData.timeframe} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                  <option value="">Selecione</option>
-                  <option value="1 minuto">1 minuto</option>
-                  <option value="2 minutos">2 minutos</option>
-                  <option value="5 minutos">5 minutos</option>
-                  <option value="10 minutos">10 minutos</option>
-                  <option value="30 minutos">30 minutos</option>
-                  <option value="60 minutos">60 minutos</option>
-                  <option value="1 dia">1 dia</option>
-                  <option value="1 mês">1 mês</option>
-                  <option value="1 ano">1 ano</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Direção</label>
-                <select required name="direction" value={formData.direction} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                  <option value="Compra">Compra</option>
-                  <option value="Venda">Venda</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Estratégia / Setup</label>
-                <div className="space-y-2">
-                  <select 
-                    required 
-                    name="strategy" 
-                    value={formData.strategy} 
-                    onChange={handleChange} 
-                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="">Selecione um setup</option>
-                    {(settings.setups || []).map((setup, idx) => (
-                      <option key={idx} value={setup}>{setup}</option>
-                    ))}
-                    <option value="Outros..">Outros..</option>
-                  </select>
-                  
-                  {isOtherStrategy && (
-                    <input 
-                      required
-                      type="text" 
-                      name="customStrategy" 
-                      value={formData.customStrategy} 
-                      onChange={handleChange} 
-                      placeholder="Nome do seu setup customizado" 
-                      className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none animate-in fade-in slide-in-from-top-1" 
-                    />
-                  )}
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Qtd (Contratos/Ações)</label>
-                <input type="number" step="0.01" name="quantity" value={formData.quantity} onChange={handleChange} placeholder="ex: 1 ou 100" className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Tendência</label>
-                <select name="trend" value={formData.trend} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                  <option value="">Selecione</option>
-                  <option value="a favor">A favor</option>
-                  <option value="contra">Contra</option>
-                  <option value="lateralizado">Lateralizado</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Preço Entrada</label>
-                <input required type="number" step="any" name="entryPrice" value={formData.entryPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Stop Inicial (Preço)</label>
-                <input required type="number" step="any" name="initialStopPrice" value={formData.initialStopPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Stop Inicial ($)</label>
-                <input type="number" step="any" name="initialStopFinancial" value={formData.initialStopFinancial} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Opcional" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Preço Alvo</label>
-                <input required type="number" step="any" name="targetPrice" value={formData.targetPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Alvo Inicial ($)</label>
-                <input type="number" step="any" name="targetFinancial" value={formData.targetFinancial} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Opcional" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Preço Saída</label>
-                <input required type="number" step="any" name="exitPrice" value={formData.exitPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Resultado</label>
-                <select name="resultType" value={formData.resultType} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                  <option value="Gain">Gain</option>
-                  <option value="0x0">0x0 (Empate)</option>
-                  <option value="Loss">Loss</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Valor do Resultado ($)</label>
-                <input required type="number" step="0.01" name="resultValue" value={formData.resultValue} onChange={handleChange} placeholder="ex: 150.00" className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Sentimento durante a operação</label>
-              <input required type="text" name="sentiment" value={formData.sentiment} onChange={handleChange} placeholder="ex: Confiante, Ansioso, Fomo..." className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="madeError" name="madeError" checked={formData.madeError} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
-                <label htmlFor="madeError" className="text-sm font-medium text-slate-700">Cometeu erros?</label>
-              </div>
-
-              {formData.madeError && (
+              {!formData.isNoTradeDay && (
                 <div>
-                  <textarea name="errorDetails" value={formData.errorDetails} onChange={handleChange} rows={2} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Qual erro cometeu?"></textarea>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Hora</label>
+                  <input required type="time" step="1" name="time" value={formData.time} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+              )}
+              {!formData.isNoTradeDay && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Ativo Operado</label>
+                  <div className="space-y-2">
+                    <select 
+                      required 
+                      name="asset" 
+                      value={formData.asset} 
+                      onChange={handleChange} 
+                      className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                    >
+                      <option value="">Selecione um ativo</option>
+                      {(settings.assets || []).map((asset, idx) => (
+                        <option key={idx} value={asset}>{asset}</option>
+                      ))}
+                      <option value="Outros..">Outros..</option>
+                    </select>
+                    
+                    {isOtherAsset && (
+                      <input 
+                        required
+                        type="text" 
+                        name="customAsset" 
+                        value={formData.customAsset} 
+                        onChange={handleChange} 
+                        placeholder="Nome do ativo customizado" 
+                        className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none animate-in fade-in slide-in-from-top-1" 
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+              {!formData.isNoTradeDay && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Timeframe</label>
+                  <select name="timeframe" value={formData.timeframe} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="">Selecione</option>
+                    <option value="1 minuto">1 minuto</option>
+                    <option value="2 minutos">2 minutos</option>
+                    <option value="5 minutos">5 minutos</option>
+                    <option value="10 minutos">10 minutos</option>
+                    <option value="30 minutos">30 minutos</option>
+                    <option value="60 minutos">60 minutos</option>
+                    <option value="1 dia">1 dia</option>
+                    <option value="1 mês">1 mês</option>
+                    <option value="1 ano">1 ano</option>
+                  </select>
                 </div>
               )}
             </div>
 
-            <div className="flex items-center gap-2 mt-2">
-              <input type="checkbox" id="isPartial" name="isPartial" checked={formData.isPartial} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
-              <label htmlFor="isPartial" className="text-sm text-slate-700">Fez Parcial?</label>
-            </div>
-
-            {formData.isPartial && (
+            {formData.isNoTradeDay ? (
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Racional da Parcial</label>
-                <textarea name="partialRationale" value={formData.partialRationale} onChange={handleChange} rows={2} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Explique por que realizou a parcial..."></textarea>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Motivo / Explicação</label>
+                <textarea required name="noTradeReason" value={formData.noTradeReason} onChange={handleChange} rows={6} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Explique por que não houve operações hoje (ex: mercado lateralizado, falta de padrão claro, etc)..."></textarea>
               </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Direção</label>
+                    <select required name="direction" value={formData.direction} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                      <option value="Compra">Compra</option>
+                      <option value="Venda">Venda</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Estratégia / Setup</label>
+                    <div className="space-y-2">
+                      <select 
+                        required 
+                        name="strategy" 
+                        value={formData.strategy} 
+                        onChange={handleChange} 
+                        className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                      >
+                        <option value="">Selecione um setup</option>
+                        {(settings.setups || []).map((setup, idx) => (
+                          <option key={idx} value={setup}>{setup}</option>
+                        ))}
+                        <option value="Outros..">Outros..</option>
+                      </select>
+                      
+                      {isOtherStrategy && (
+                        <input 
+                          required
+                          type="text" 
+                          name="customStrategy" 
+                          value={formData.customStrategy} 
+                          onChange={handleChange} 
+                          placeholder="Nome do seu setup customizado" 
+                          className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none animate-in fade-in slide-in-from-top-1" 
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Qtd (Contratos/Ações)</label>
+                    <input type="number" step="0.01" name="quantity" value={formData.quantity} onChange={handleChange} placeholder="ex: 1 ou 100" className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tendência</label>
+                    <select name="trend" value={formData.trend} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                      <option value="">Selecione</option>
+                      <option value="a favor">A favor</option>
+                      <option value="contra">Contra</option>
+                      <option value="lateralizado">Lateralizado</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Preço Entrada</label>
+                    <input required type="number" step="any" name="entryPrice" value={formData.entryPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Stop Inicial (Preço)</label>
+                    <input required type="number" step="any" name="initialStopPrice" value={formData.initialStopPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Stop Inicial ($)</label>
+                    <input type="number" step="any" name="initialStopFinancial" value={formData.initialStopFinancial} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Opcional" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Preço Alvo</label>
+                    <input required type="number" step="any" name="targetPrice" value={formData.targetPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Alvo Inicial ($)</label>
+                    <input type="number" step="any" name="targetFinancial" value={formData.targetFinancial} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Opcional" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Preço Saída</label>
+                    <input required type="number" step="any" name="exitPrice" value={formData.exitPrice} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Resultado</label>
+                    <select name="resultType" value={formData.resultType} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                      <option value="Gain">Gain</option>
+                      <option value="0x0">0x0 (Empate)</option>
+                      <option value="Loss">Loss</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Valor do Resultado ($)</label>
+                    <input required type="number" step="0.01" name="resultValue" value={formData.resultValue} onChange={handleChange} placeholder="ex: 150.00" className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Sentimento durante a operação</label>
+                  <input required type="text" name="sentiment" value={formData.sentiment} onChange={handleChange} placeholder="ex: Confiante, Ansioso, Fomo..." className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="madeError" name="madeError" checked={formData.madeError} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                    <label htmlFor="madeError" className="text-sm font-medium text-slate-700">Cometeu erros?</label>
+                  </div>
+
+                  {formData.madeError && (
+                    <div>
+                      <textarea name="errorDetails" value={formData.errorDetails} onChange={handleChange} rows={2} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Qual erro cometeu?"></textarea>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 mt-2">
+                  <input type="checkbox" id="isPartial" name="isPartial" checked={formData.isPartial} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" />
+                  <label htmlFor="isPartial" className="text-sm text-slate-700">Fez Parcial?</label>
+                </div>
+
+                {formData.isPartial && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Racional da Parcial</label>
+                    <textarea name="partialRationale" value={formData.partialRationale} onChange={handleChange} rows={2} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Explique por que realizou a parcial..."></textarea>
+                  </div>
+                )}
+
+                <div className="border-t border-slate-200 pt-4 mt-4">
+                  <h3 className="text-sm font-semibold text-slate-800 mb-3">Checklist de Disciplina</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+                    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                      <input type="checkbox" name="evalFollowedPlan" checked={formData.evalFollowedPlan} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                      Você seguiu seu plano?
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                      <input type="checkbox" name="evalRespectedSetup" checked={formData.evalRespectedSetup} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                      A entrada respeitou o setup?
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                      <input type="checkbox" name="evalImpulseEntry" checked={formData.evalImpulseEntry} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                      Entrou por impulso?
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                      <input type="checkbox" name="evalMovedStop" checked={formData.evalMovedStop} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                      Moveu o stop?
+                    </label>
+                    <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
+                      <input type="checkbox" name="evalEarlyProfit" checked={formData.evalEarlyProfit} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+                      Realizou lucro antes da hora?
+                    </label>
+                  </div>
+                  <h3 className="text-sm font-semibold text-slate-800 mb-3">Notas da Operação (0 a 10)</h3>
+                  <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Qualidade da entrada</label>
+                      <input type="number" min="0" max="10" name="ratingEntryQuality" value={formData.ratingEntryQuality} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Disciplina</label>
+                      <input type="number" min="0" max="10" name="ratingDiscipline" value={formData.ratingDiscipline} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Execução</label>
+                      <input type="number" min="0" max="10" name="ratingExecution" value={formData.ratingExecution} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Gestão</label>
+                      <input type="number" min="0" max="10" name="ratingManagement" value={formData.ratingManagement} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Controle emocional</label>
+                      <input type="number" min="0" max="10" name="ratingEmotionalControl" value={formData.ratingEmotionalControl} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Descrição / Racional da Operação</label>
+                  <textarea required name="description" value={formData.description} onChange={handleChange} rows={4} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Descreva o motivo da entrada, contexto do mercado..."></textarea>
+                </div>
+              </>
             )}
-
-            <div className="border-t border-slate-200 pt-4 mt-4">
-              <h3 className="text-sm font-semibold text-slate-800 mb-3">Checklist de Disciplina</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
-                  <input type="checkbox" name="evalFollowedPlan" checked={formData.evalFollowedPlan} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                  Você seguiu seu plano?
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
-                  <input type="checkbox" name="evalRespectedSetup" checked={formData.evalRespectedSetup} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                  A entrada respeitou o setup?
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
-                  <input type="checkbox" name="evalImpulseEntry" checked={formData.evalImpulseEntry} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                  Entrou por impulso?
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
-                  <input type="checkbox" name="evalMovedStop" checked={formData.evalMovedStop} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                  Moveu o stop?
-                </label>
-                <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-2 rounded-lg border border-transparent hover:border-slate-200 transition-colors">
-                  <input type="checkbox" name="evalEarlyProfit" checked={formData.evalEarlyProfit} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
-                  Realizou lucro antes da hora?
-                </label>
-              </div>
-              <h3 className="text-sm font-semibold text-slate-800 mb-3">Notas da Operação (0 a 10)</h3>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Qualidade da entrada</label>
-                  <input type="number" min="0" max="10" name="ratingEntryQuality" value={formData.ratingEntryQuality} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Disciplina</label>
-                  <input type="number" min="0" max="10" name="ratingDiscipline" value={formData.ratingDiscipline} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Execução</label>
-                  <input type="number" min="0" max="10" name="ratingExecution" value={formData.ratingExecution} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Gestão</label>
-                  <input type="number" min="0" max="10" name="ratingManagement" value={formData.ratingManagement} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-600 mb-1">⭐ Controle emocional</label>
-                  <input type="number" min="0" max="10" name="ratingEmotionalControl" value={formData.ratingEmotionalControl} onChange={handleChange} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Descrição / Racional da Operação</label>
-              <textarea required name="description" value={formData.description} onChange={handleChange} rows={4} className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Descreva o motivo da entrada, contexto do mercado..."></textarea>
-            </div>
           </form>
 
           {/* Image Annotator Side */}

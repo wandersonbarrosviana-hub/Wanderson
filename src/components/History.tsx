@@ -47,67 +47,105 @@ export function History({ trades, onDelete, onUpdate }: HistoryProps) {
                 </td>
               </tr>
             ) : (
-              sortedTrades.map(trade => (
-                <tr key={trade.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="p-4 text-sm text-slate-700">
-                    {format(parseISO(trade.date), 'dd MMM yyyy', { locale: ptBR })}
-                  </td>
-                  <td className="p-4 text-sm font-medium text-slate-900">{trade.asset}</td>
-                  <td className="p-4 text-sm">
-                    <span className={cn(
-                      "px-2.5 py-1 rounded-full text-xs font-medium",
-                      trade.direction === 'Compra' ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"
-                    )}>
-                      {trade.direction || 'Compra'}
-                    </span>
-                  </td>
-                  <td className="p-4 text-sm text-slate-600 capitalize">{trade.trend || '-'}</td>
-                  <td className="p-4 text-sm text-slate-600">{trade.strategy || '-'}</td>
-                  <td className="p-4 text-sm">
-                    <span className={cn(
-                      "px-2.5 py-1 rounded-full text-xs font-medium",
-                      trade.resultType === 'Gain' ? "bg-emerald-100 text-emerald-700" :
-                      trade.resultType === 'Loss' ? "bg-red-100 text-red-700" :
-                      "bg-slate-100 text-slate-700"
-                    )}>
-                      {trade.resultType}
-                    </span>
-                  </td>
-                  <td className="p-4 text-sm font-medium">
-                    <span className={cn(
-                      trade.resultValue > 0 ? "text-emerald-600" :
-                      trade.resultValue < 0 ? "text-red-600" : "text-slate-600"
-                    )}>
-                      {trade.resultValue >= 0 ? '+' : ''}{trade.resultValue.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })}
-                    </span>
-                  </td>
-                  <td className="p-4 text-sm text-slate-600 truncate max-w-[150px]" title={trade.sentiment}>
-                    {trade.sentiment}
-                  </td>
-                  <td className="p-4 text-sm text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button 
-                        onClick={() => setViewTrade(trade)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                        title="Ver Detalhes"
-                      >
-                        <ExternalLink size={18} />
-                      </button>
-                      <button 
-                        onClick={() => {
-                          if(confirm('Tem certeza que deseja excluir esta operação?')) {
-                            onDelete(trade.id);
-                          }
-                        }}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                        title="Excluir"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+              sortedTrades.map(trade => {
+                if (trade.isNoTradeDay) {
+                  return (
+                    <tr key={trade.id} className="hover:bg-slate-50/50 transition-colors bg-amber-50/30">
+                      <td className="p-4 text-sm text-slate-700">
+                        {format(parseISO(trade.date), 'dd MMM yyyy', { locale: ptBR })}
+                      </td>
+                      <td colSpan={7} className="p-4 text-sm text-slate-600 italic">
+                        <span className="font-semibold text-slate-800 not-italic mr-2">Sem operações:</span>
+                        {trade.noTradeReason || trade.description}
+                      </td>
+                      <td className="p-4 text-sm text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button 
+                            onClick={() => setViewTrade(trade)}
+                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                            title="Ver Detalhes"
+                          >
+                            <ExternalLink size={18} />
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if(confirm('Tem certeza que deseja excluir este registro?')) {
+                                onDelete(trade.id);
+                              }
+                            }}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                            title="Excluir"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return (
+                  <tr key={trade.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 text-sm text-slate-700">
+                      {format(parseISO(trade.date), 'dd MMM yyyy', { locale: ptBR })}
+                    </td>
+                    <td className="p-4 text-sm font-medium text-slate-900">{trade.asset}</td>
+                    <td className="p-4 text-sm">
+                      <span className={cn(
+                        "px-2.5 py-1 rounded-full text-xs font-medium",
+                        trade.direction === 'Compra' ? "bg-blue-100 text-blue-700" : "bg-orange-100 text-orange-700"
+                      )}>
+                        {trade.direction || 'Compra'}
+                      </span>
+                    </td>
+                    <td className="p-4 text-sm text-slate-600 capitalize">{trade.trend || '-'}</td>
+                    <td className="p-4 text-sm text-slate-600">{trade.strategy || '-'}</td>
+                    <td className="p-4 text-sm">
+                      <span className={cn(
+                        "px-2.5 py-1 rounded-full text-xs font-medium",
+                        trade.resultType === 'Gain' ? "bg-emerald-100 text-emerald-700" :
+                        trade.resultType === 'Loss' ? "bg-red-100 text-red-700" :
+                        "bg-slate-100 text-slate-700"
+                      )}>
+                        {trade.resultType}
+                      </span>
+                    </td>
+                    <td className="p-4 text-sm font-medium">
+                      <span className={cn(
+                        trade.resultValue > 0 ? "text-emerald-600" :
+                        trade.resultValue < 0 ? "text-red-600" : "text-slate-600"
+                      )}>
+                        {trade.resultValue >= 0 ? '+' : ''}{trade.resultValue.toLocaleString('pt-BR', { style: 'currency', currency: 'USD' })}
+                      </span>
+                    </td>
+                    <td className="p-4 text-sm text-slate-600 truncate max-w-[150px]" title={trade.sentiment}>
+                      {trade.sentiment}
+                    </td>
+                    <td className="p-4 text-sm text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => setViewTrade(trade)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          title="Ver Detalhes"
+                        >
+                          <ExternalLink size={18} />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            if(confirm('Tem certeza que deseja excluir esta operação?')) {
+                              onDelete(trade.id);
+                            }
+                          }}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          title="Excluir"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
