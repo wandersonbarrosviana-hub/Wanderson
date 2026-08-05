@@ -110,6 +110,80 @@ async function startServer() {
     }
   });
 
+  app.post("/api/ask-ai", async (req, res) => {
+    try {
+      const { trades, question, chatHistory, riskSettings } = req.body;
+      
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "A chave da API do Gemini não está configurada no servidor." });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey: apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const parts: any[] = [];
+      let formattedTrades = '';
+      
+      trades.forEach((t: any, index: number) => {
+        if (!t.isNoTradeDay) {
+          formattedTrades += `Operação ${index + 1}:\nData: ${t.date}, Ativo: ${t.asset}, Direção: ${t.direction}, Resultado: $${t.resultValue} (${t.resultType}), Estratégia: ${t.strategy || 'N/A'}\n\n`;
+        } else {
+          formattedTrades += `Dia sem Operação:\nData: ${t.date}, Motivo: ${t.noTradeReason || t.description}\n\n`;
+        }
+      });
+
+      const riskInfo = `
+      Configurações de Risco do Usuário:
+      - Limite de Risco Diário: ${riskSettings?.dailyRiskLimit ? `$${riskSettings.dailyRiskLimit}` : 'Não definido'}
+      - Risco Máximo por Operação: ${riskSettings?.riskPerTradeLimit ? `$${riskSettings.riskPerTradeLimit}` : 'Não definido'}
+      `;
+
+      let textPrompt = `
+      O usuário está fazendo uma pergunta sobre suas operações.
+      
+      ${riskInfo}
+      
+      Aqui estão as operações registradas (simplificadas):
+      ${formattedTrades}
+      
+      Pergunta do Usuário: "${question}"
+      
+      Responda de forma precisa e detalhada baseando-se APENAS nos dados fornecidos. Formate a resposta em HTML básico (div, p, ul, li, strong) para ser renderizado no React. Seja prestativo, objetivo e direto ao ponto.
+      `;
+
+      parts.push({ text: textPrompt });
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3.6-flash",
+        contents: parts,
+        config: {
+            systemInstruction: "Você é um analista de trading experiente. Responda as dúvidas do trader com base nos dados do seu diário de forma direta e educativa."
+        }
+      });
+
+      let responseText = response.text || "";
+      responseText = responseText.replace(/^```html\n?/gm, '').replace(/^```\n?/gm, '').trim();
+
+      res.json({ answer: responseText });
+    } catch (error: any) {
+      console.error("Error asking AI:", error);
+      const isQuotaError = error.message?.includes('429') || error.message?.includes('quota');
+      res.status(isQuotaError ? 429 : 500).json({ 
+        error: isQuotaError 
+          ? "A cota da API do Gemini foi excedida."
+          : "Falha ao processar a pergunta.", 
+        details: error.message 
+      });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
