@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import { Trade } from '../types';
-import { FileDown, Calendar, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { FileDown, Calendar, Loader2, AlertCircle, Sparkles, Filter } from 'lucide-react';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { jsPDF } from 'jspdf';
 import { toJpeg } from 'html-to-image';
 import { LogoIcon } from './Logo';
+import { useTradeSync } from '../hooks/useTradeSync';
 
 interface ReportsProps {
   trades: Trade[];
 }
 
 export function Reports({ trades }: ReportsProps) {
+  const { settings } = useTradeSync();
+  const accounts = settings.accounts || [];
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
+
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -28,13 +33,17 @@ export function Reports({ trades }: ReportsProps) {
     const start = startOfDay(parseISO(startDate));
     const end = endOfDay(parseISO(endDate));
 
-    const selectedTrades = trades.filter((t) => {
+    let selectedTrades = trades.filter((t) => {
       const tradeDate = parseISO(t.date);
       return isWithinInterval(tradeDate, { start, end });
     });
 
+    if (selectedAccountId !== 'all') {
+      selectedTrades = selectedTrades.filter(t => t.accountId === selectedAccountId || (!t.accountId && accounts[0]?.id === selectedAccountId));
+    }
+
     if (selectedTrades.length === 0) {
-      setError('Nenhuma operação encontrada no período selecionado.');
+      setError('Nenhuma operação encontrada no período e conta selecionados.');
       return;
     }
 
@@ -46,7 +55,11 @@ export function Reports({ trades }: ReportsProps) {
       const response = await fetch('/api/analyze-trades', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ trades: selectedTrades, isReport: true }),
+        body: JSON.stringify({ 
+          trades: selectedTrades, 
+          isReport: true,
+          accounts: accounts
+        }),
       });
 
       const data = await response.json();
@@ -224,6 +237,25 @@ export function Reports({ trades }: ReportsProps) {
           <p className="text-sm text-slate-500">Exporte relatórios em PDF com análises da IA</p>
         </div>
       </div>
+
+      {accounts.length > 0 && (
+        <div className="mb-6 p-4 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-slate-400" />
+            <span className="text-sm font-medium text-slate-700">Filtrar por Conta:</span>
+          </div>
+          <select 
+            value={selectedAccountId} 
+            onChange={e => setSelectedAccountId(e.target.value)}
+            className="bg-white border border-slate-200 text-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 min-w-[200px]"
+          >
+            <option value="all">Todas as Contas</option>
+            {accounts.map(acc => (
+              <option key={acc.id} value={acc.id}>{acc.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div>

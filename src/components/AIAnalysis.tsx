@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Trade } from '../types';
-import { Sparkles, Loader2, AlertCircle, Send, MessageSquare } from 'lucide-react';
+import { Sparkles, Loader2, AlertCircle, Send, MessageSquare, Filter } from 'lucide-react';
 import { useTradeSync } from '../hooks/useTradeSync';
 
 interface AIAnalysisProps {
@@ -15,6 +15,19 @@ interface ChatMessage {
 
 export function AIAnalysis({ trades }: AIAnalysisProps) {
   const { settings } = useTradeSync();
+  const accounts = settings.accounts || [];
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
+  
+  const filteredTrades = useMemo(() => {
+    let filtered = trades;
+    
+    if (selectedAccountId !== 'all') {
+      filtered = filtered.filter(t => t.accountId === selectedAccountId || (!t.accountId && accounts[0]?.id === selectedAccountId));
+    }
+    
+    return filtered;
+  }, [trades, selectedAccountId, accounts]);
+
   const [analysis, setAnalysis] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
@@ -34,8 +47,8 @@ export function AIAnalysis({ trades }: AIAnalysisProps) {
   }, [messages]);
 
   const handleAnalyze = async () => {
-    if (trades.length === 0) {
-      setError('Adicione pelo menos uma operação para ser analisada.');
+    if (filteredTrades.length === 0) {
+      setError('Adicione pelo menos uma operação na conta selecionada para ser analisada.');
       return;
     }
 
@@ -47,8 +60,8 @@ export function AIAnalysis({ trades }: AIAnalysisProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          trades,
-          accounts: settings.accounts || []
+          trades: filteredTrades,
+          accounts: accounts
         }),
       });
 
@@ -72,8 +85,8 @@ export function AIAnalysis({ trades }: AIAnalysisProps) {
     
     if (!currentQuestion.trim() || isAsking) return;
     
-    if (trades.length === 0) {
-      setError('Adicione pelo menos uma operação para perguntar algo à IA.');
+    if (filteredTrades.length === 0) {
+      setError('Adicione pelo menos uma operação na conta selecionada para perguntar algo à IA.');
       return;
     }
 
@@ -94,9 +107,9 @@ export function AIAnalysis({ trades }: AIAnalysisProps) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          trades,
+          trades: filteredTrades,
           question,
-          accounts: settings.accounts || []
+          accounts: accounts
         }),
       });
 
@@ -128,6 +141,25 @@ export function AIAnalysis({ trades }: AIAnalysisProps) {
 
   return (
     <div className="space-y-6">
+      {accounts.length > 0 && (
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-slate-400" />
+            <span className="text-sm font-medium text-slate-700">Filtrar por Conta:</span>
+          </div>
+          <select 
+            value={selectedAccountId} 
+            onChange={e => setSelectedAccountId(e.target.value)}
+            className="bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-[200px]"
+          >
+            <option value="all">Todas as Contas</option>
+            {accounts.map(acc => (
+              <option key={acc.id} value={acc.id}>{acc.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+      
       <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
         <div className="flex flex-col items-center justify-center text-center max-w-2xl mx-auto py-8">
           <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-6">

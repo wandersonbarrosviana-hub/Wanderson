@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Trade } from '../types';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ExternalLink, Trash2 } from 'lucide-react';
+import { ExternalLink, Trash2, Filter } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { RegisterModal } from './RegisterModal';
+import { useTradeSync } from '../hooks/useTradeSync';
 
 interface HistoryProps {
   trades: Trade[];
@@ -14,14 +15,45 @@ interface HistoryProps {
 
 export function History({ trades, onDelete, onUpdate }: HistoryProps) {
   const [viewTrade, setViewTrade] = useState<Trade | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
+  const { settings } = useTradeSync();
+  const accounts = settings.accounts || [];
 
-  const sortedTrades = [...trades].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const filteredTrades = useMemo(() => {
+    let filtered = trades;
+    
+    if (selectedAccountId !== 'all') {
+      filtered = filtered.filter(t => t.accountId === selectedAccountId || (!t.accountId && accounts[0]?.id === selectedAccountId));
+    }
+    
+    return filtered;
+  }, [trades, selectedAccountId, accounts]);
+
+  const sortedTrades = [...filteredTrades].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="p-6 border-b border-slate-100">
-        <h2 className="text-lg font-semibold text-slate-800">Histórico de Operações</h2>
-        <p className="text-sm text-slate-500">Suas análises organizadas por data.</p>
+      <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-800">Histórico de Operações</h2>
+          <p className="text-sm text-slate-500">Suas análises organizadas por data.</p>
+        </div>
+        
+        {accounts.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Filter size={16} className="text-slate-400" />
+            <select 
+              value={selectedAccountId} 
+              onChange={e => setSelectedAccountId(e.target.value)}
+              className="bg-slate-50 border border-slate-200 text-slate-700 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">Todas as Contas</option>
+              {accounts.map(acc => (
+                <option key={acc.id} value={acc.id}>{acc.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="overflow-x-auto">
