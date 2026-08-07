@@ -201,6 +201,25 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
     };
   }, [trades, startDate, selectedAccountId, accounts]);
 
+  const activeRiskSettings = useMemo(() => {
+    if (selectedAccountId === 'all') {
+      if (accounts.length === 1) {
+        return {
+          dailyRiskLimit: accounts[0].dailyRiskLimit,
+          riskPerTradeLimit: accounts[0].riskPerTradeLimit,
+          maxTradesPerDay: accounts[0].maxTradesPerDay
+        };
+      }
+      return { dailyRiskLimit: undefined, riskPerTradeLimit: undefined, maxTradesPerDay: undefined };
+    }
+    const acc = accounts.find(a => a.id === selectedAccountId);
+    return acc ? {
+      dailyRiskLimit: acc.dailyRiskLimit,
+      riskPerTradeLimit: acc.riskPerTradeLimit,
+      maxTradesPerDay: acc.maxTradesPerDay
+    } : { dailyRiskLimit: undefined, riskPerTradeLimit: undefined, maxTradesPerDay: undefined };
+  }, [accounts, selectedAccountId]);
+
   const chronologicalTrades = useMemo(() => {
     return filteredTrades;
   }, [filteredTrades]);
@@ -648,65 +667,77 @@ export function Dashboard({ trades, onUpdate }: DashboardProps) {
 
       {/* Risk Management Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {settings.dailyRiskLimit ? (
+        {activeRiskSettings.dailyRiskLimit ? (
           <StatCard 
             title={`Risco Diário (${riskStats.isSpecificDate ? format(parseISO(riskStats.targetDate), 'dd/MM') : 'Hoje'})`} 
             value={riskStats.dailyLoss} 
             isCurrency 
             icon={<Shield size={20} />} 
             valueColor={
-              riskStats.dailyLoss > settings.dailyRiskLimit 
+              riskStats.dailyLoss > activeRiskSettings.dailyRiskLimit 
                 ? 'text-red-600' 
-                : riskStats.dailyLoss >= settings.dailyRiskLimit * 0.8 
+                : riskStats.dailyLoss >= activeRiskSettings.dailyRiskLimit * 0.8 
                   ? 'text-orange-500' 
                   : 'text-emerald-600'
             }
-            suffix={` / $${settings.dailyRiskLimit}`}
+            suffix={` / $${activeRiskSettings.dailyRiskLimit}`}
           />
         ) : (
           <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-            <p className="text-xs text-slate-400">Configure o limite de risco diário nas configurações.</p>
+            <p className="text-xs text-slate-400">
+              {selectedAccountId === 'all' && accounts.length > 1 
+                ? 'Selecione uma conta para ver o risco diário.' 
+                : 'Configure o limite de risco diário nas configurações.'}
+            </p>
           </div>
         )}
 
-        {settings.riskPerTradeLimit ? (
+        {activeRiskSettings.riskPerTradeLimit ? (
           <StatCard 
             title={`Maior Stop (${riskStats.isSpecificDate ? format(parseISO(riskStats.targetDate), 'dd/MM') : 'do Dia'})`} 
             value={riskStats.maxDailyTradeLoss} 
             isCurrency 
             icon={<TrendingDown size={20} />} 
             valueColor={
-              riskStats.maxDailyTradeLoss > settings.riskPerTradeLimit 
+              riskStats.maxDailyTradeLoss > activeRiskSettings.riskPerTradeLimit 
                 ? 'text-red-600' 
-                : riskStats.maxDailyTradeLoss >= settings.riskPerTradeLimit * 0.8 
+                : riskStats.maxDailyTradeLoss >= activeRiskSettings.riskPerTradeLimit * 0.8 
                   ? 'text-orange-500' 
                   : 'text-emerald-600'
             }
-            suffix={` / $${settings.riskPerTradeLimit}`}
+            suffix={` / $${activeRiskSettings.riskPerTradeLimit}`}
           />
         ) : (
           <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-            <p className="text-xs text-slate-400">Configure o risco por operação nas configurações.</p>
+            <p className="text-xs text-slate-400">
+              {selectedAccountId === 'all' && accounts.length > 1 
+                ? 'Selecione uma conta para ver o risco por operação.' 
+                : 'Configure o risco por operação nas configurações.'}
+            </p>
           </div>
         )}
 
-        {settings.maxTradesPerDay ? (
+        {activeRiskSettings.maxTradesPerDay ? (
           <StatCard 
             title={`Operações (${riskStats.isSpecificDate ? format(parseISO(riskStats.targetDate), 'dd/MM') : 'Hoje'})`} 
             value={riskStats.tradeCount} 
             icon={<ListChecks size={20} />} 
             valueColor={
-              riskStats.tradeCount > settings.maxTradesPerDay 
+              riskStats.tradeCount > activeRiskSettings.maxTradesPerDay 
                 ? 'text-red-600' 
-                : riskStats.tradeCount >= settings.maxTradesPerDay 
+                : riskStats.tradeCount >= activeRiskSettings.maxTradesPerDay 
                   ? 'text-orange-500' 
                   : 'text-slate-800'
             }
-            suffix={` / ${settings.maxTradesPerDay}`}
+            suffix={` / ${activeRiskSettings.maxTradesPerDay}`}
           />
         ) : (
           <div className="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-center">
-            <p className="text-xs text-slate-400">Configure o limite de operações nas configurações.</p>
+            <p className="text-xs text-slate-400">
+              {selectedAccountId === 'all' && accounts.length > 1 
+                ? 'Selecione uma conta para ver o limite de operações.' 
+                : 'Configure o limite de operações nas configurações.'}
+            </p>
           </div>
         )}
       </div>

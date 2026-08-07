@@ -134,82 +134,82 @@ export function Settings() {
         <div className="p-6 space-y-6">
         <div className="space-y-4">
           {settings.accounts.map((account) => (
-            <div key={account.id} className="flex items-end gap-4 p-4 border border-slate-100 bg-slate-50 rounded-lg">
-              <div className="flex-1">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Nome da Conta</label>
-                <input
-                  type="text"
-                  value={account.name}
-                  onChange={(e) => handleUpdateAccount(account.id, 'name', e.target.value)}
-                  className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Ex: Mesa Proprietária, Conta Pessoal..."
-                />
+            <div key={account.id} className="flex flex-col gap-4 p-5 border border-slate-200 bg-slate-50/50 rounded-xl">
+              <div className="flex items-start justify-between gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 flex-1">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Nome da Conta</label>
+                    <input
+                      type="text"
+                      value={account.name}
+                      onChange={(e) => handleUpdateAccount(account.id, 'name', e.target.value)}
+                      className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                      placeholder="Ex: Mesa Proprietária, Conta Pessoal..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Saldo Inicial ($)</label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2 text-slate-400 text-sm">$</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={account.initialBalance}
+                        onChange={(e) => handleUpdateAccount(account.id, 'initialBalance', Number(e.target.value))}
+                        className="w-full pl-7 rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                      />
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleRemoveAccount(account.id)}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors mt-6 shrink-0"
+                  title="Remover Conta"
+                >
+                  <Trash2 size={20} />
+                </button>
               </div>
-              <div className="flex-1 max-w-[200px]">
-                <label className="block text-sm font-medium text-slate-700 mb-1">Saldo Inicial ($)</label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={account.initialBalance}
-                  onChange={(e) => handleUpdateAccount(account.id, 'initialBalance', Number(e.target.value))}
-                  className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                />
+              
+              <div className="pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-[13px] font-medium text-slate-700 mb-1">Risco Diário Máx.</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-slate-400 text-sm">$</span>
+                    <input 
+                      type="number" 
+                      value={account.dailyRiskLimit || ''} 
+                      onChange={e => handleUpdateAccount(account.id, 'dailyRiskLimit', Number(e.target.value))}
+                      className="w-full pl-7 rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                      placeholder="Ex: 100"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-slate-700 mb-1">Risco por Operação</label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-2 text-slate-400 text-sm">$</span>
+                    <input 
+                      type="number" 
+                      value={account.riskPerTradeLimit || ''} 
+                      onChange={e => handleUpdateAccount(account.id, 'riskPerTradeLimit', Number(e.target.value))}
+                      className="w-full pl-7 rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                      placeholder="Ex: 20"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[13px] font-medium text-slate-700 mb-1">Max. Op/Dia</label>
+                  <input 
+                    type="number" 
+                    value={account.maxTradesPerDay || ''} 
+                    onChange={e => handleUpdateAccount(account.id, 'maxTradesPerDay', Number(e.target.value))}
+                    className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    placeholder="Ex: 5"
+                  />
+                </div>
               </div>
-              <button
-                onClick={() => handleRemoveAccount(account.id)}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-md transition-colors mb-0.5"
-                title="Remover Conta"
-              >
-                <Trash2 size={20} />
-              </button>
             </div>
           ))}
-        </div>
-
-        {/* Risk Management Section */}
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <h2 className="text-lg font-semibold text-slate-800 mb-4">Gerenciamento de Risco</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Risco Diário Máximo ($)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-2 text-slate-400 text-sm">$</span>
-                <input 
-                  type="number" 
-                  value={settings.dailyRiskLimit || ''} 
-                  onChange={e => setSettings({ ...settings, dailyRiskLimit: Number(e.target.value) })}
-                  className="w-full pl-7 rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Ex: 100"
-                />
-              </div>
-              <p className="text-[10px] text-slate-400 mt-1">Limite de perda total no dia.</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Risco por Operação ($)</label>
-              <div className="relative">
-                <span className="absolute left-3 top-2 text-slate-400 text-sm">$</span>
-                <input 
-                  type="number" 
-                  value={settings.riskPerTradeLimit || ''} 
-                  onChange={e => setSettings({ ...settings, riskPerTradeLimit: Number(e.target.value) })}
-                  className="w-full pl-7 rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Ex: 20"
-                />
-              </div>
-              <p className="text-[10px] text-slate-400 mt-1">Stop máximo financeiro aceitável por trade.</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Qtd Operações por Dia</label>
-              <input 
-                type="number" 
-                value={settings.maxTradesPerDay || ''} 
-                onChange={e => setSettings({ ...settings, maxTradesPerDay: Number(e.target.value) })}
-                className="w-full rounded-md border border-slate-300 p-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Ex: 5"
-              />
-              <p className="text-[10px] text-slate-400 mt-1">Número máximo de entradas planejadas.</p>
-            </div>
-          </div>
         </div>
 
         {/* Setups Section */}

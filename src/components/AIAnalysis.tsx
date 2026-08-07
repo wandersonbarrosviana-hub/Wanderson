@@ -48,11 +48,7 @@ export function AIAnalysis({ trades }: AIAnalysisProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           trades,
-          riskSettings: {
-            dailyRiskLimit: settings.dailyRiskLimit,
-            riskPerTradeLimit: settings.riskPerTradeLimit,
-            maxTradesPerDay: settings.maxTradesPerDay
-          }
+          accounts: settings.accounts || []
         }),
       });
 
@@ -100,11 +96,7 @@ export function AIAnalysis({ trades }: AIAnalysisProps) {
         body: JSON.stringify({ 
           trades,
           question,
-          riskSettings: {
-            dailyRiskLimit: settings.dailyRiskLimit,
-            riskPerTradeLimit: settings.riskPerTradeLimit,
-            maxTradesPerDay: settings.maxTradesPerDay
-          }
+          accounts: settings.accounts || []
         }),
       });
 

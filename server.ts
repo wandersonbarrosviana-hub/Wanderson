@@ -16,7 +16,7 @@ async function startServer() {
   // API Routes
   app.post("/api/analyze-trades", async (req, res) => {
     try {
-      const { trades, isReport, riskSettings } = req.body;
+      const { trades, isReport, accounts } = req.body;
       
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
@@ -34,9 +34,14 @@ async function startServer() {
 
       const parts: any[] = [];
       let formattedTrades = '';
+      
+      const accountMap = new Map<string, any>(accounts?.map((acc: any) => [acc.id, acc]) || []);
 
       trades.forEach((t: any, index: number) => {
-        formattedTrades += `Operação ${index + 1}:\nData: ${t.date}, Ativo: ${t.asset}, Entrada: ${t.entryPrice}, Saída: ${t.exitPrice}, Resultado: $${t.resultValue}, Sentimento: ${t.sentiment}, Tendência: ${t.trend || 'N/A'}, Descrição: ${t.description}, Stop Financeiro Planejado: $${t.initialStopFinancial || 'N/A'}, Alvo Financeiro Planejado: $${t.targetFinancial || 'N/A'}\n\n`;
+        const account = accountMap.get(t.accountId);
+        const accountName = account ? account.name : 'Conta Padrão';
+        
+        formattedTrades += `Operação ${index + 1} (Conta: ${accountName}):\nData: ${t.date}, Ativo: ${t.asset}, Entrada: ${t.entryPrice}, Saída: ${t.exitPrice}, Resultado: $${t.resultValue}, Sentimento: ${t.sentiment}, Tendência: ${t.trend || 'N/A'}, Descrição: ${t.description}, Stop Financeiro Planejado: $${t.initialStopFinancial || 'N/A'}, Alvo Financeiro Planejado: $${t.targetFinancial || 'N/A'}\n\n`;
         
         if (t.imageUrl && t.imageUrl.startsWith('data:image')) {
           const mimeType = t.imageUrl.substring(5, t.imageUrl.indexOf(';'));
@@ -50,12 +55,17 @@ async function startServer() {
         }
       });
 
-      const riskInfo = `
-      Configurações de Risco do Usuário:
-      - Limite de Risco Diário: ${riskSettings?.dailyRiskLimit ? `$${riskSettings.dailyRiskLimit}` : 'Não definido'}
-      - Risco Máximo por Operação: ${riskSettings?.riskPerTradeLimit ? `$${riskSettings.riskPerTradeLimit}` : 'Não definido'}
-      - Máximo de Operações por Dia: ${riskSettings?.maxTradesPerDay ? riskSettings.maxTradesPerDay : 'Não definido'}
-      `;
+      let riskInfo = 'Configurações de Risco do Usuário por Conta:\n';
+      if (accounts && accounts.length > 0) {
+        accounts.forEach((acc: any) => {
+          riskInfo += `- Conta "${acc.name}": 
+            Limite Diário: ${acc.dailyRiskLimit ? `$${acc.dailyRiskLimit}` : 'N/A'}
+            Risco p/ Operação: ${acc.riskPerTradeLimit ? `$${acc.riskPerTradeLimit}` : 'N/A'}
+            Op. por Dia: ${acc.maxTradesPerDay || 'N/A'}\n`;
+        });
+      } else {
+        riskInfo += 'Não definido.\n';
+      }
 
       let textPrompt = '';
       if (isReport) {
@@ -112,7 +122,7 @@ async function startServer() {
 
   app.post("/api/ask-ai", async (req, res) => {
     try {
-      const { trades, question, chatHistory, riskSettings } = req.body;
+      const { trades, question, accounts } = req.body;
       
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
@@ -131,19 +141,30 @@ async function startServer() {
       const parts: any[] = [];
       let formattedTrades = '';
       
+      const accountMap = new Map<string, any>(accounts?.map((acc: any) => [acc.id, acc]) || []);
+
       trades.forEach((t: any, index: number) => {
+        const account = accountMap.get(t.accountId);
+        const accountName = account ? account.name : 'Conta Padrão';
+        
         if (!t.isNoTradeDay) {
-          formattedTrades += `Operação ${index + 1}:\nData: ${t.date}, Ativo: ${t.asset}, Direção: ${t.direction}, Resultado: $${t.resultValue} (${t.resultType}), Estratégia: ${t.strategy || 'N/A'}\n\n`;
+          formattedTrades += `Operação ${index + 1} (Conta: ${accountName}):\nData: ${t.date}, Ativo: ${t.asset}, Direção: ${t.direction}, Resultado: $${t.resultValue} (${t.resultType}), Estratégia: ${t.strategy || 'N/A'}\n\n`;
         } else {
-          formattedTrades += `Dia sem Operação:\nData: ${t.date}, Motivo: ${t.noTradeReason || t.description}\n\n`;
+          formattedTrades += `Dia sem Operação (Conta: ${accountName}):\nData: ${t.date}, Motivo: ${t.noTradeReason || t.description}\n\n`;
         }
       });
 
-      const riskInfo = `
-      Configurações de Risco do Usuário:
-      - Limite de Risco Diário: ${riskSettings?.dailyRiskLimit ? `$${riskSettings.dailyRiskLimit}` : 'Não definido'}
-      - Risco Máximo por Operação: ${riskSettings?.riskPerTradeLimit ? `$${riskSettings.riskPerTradeLimit}` : 'Não definido'}
-      `;
+      let riskInfo = 'Configurações de Risco do Usuário por Conta:\n';
+      if (accounts && accounts.length > 0) {
+        accounts.forEach((acc: any) => {
+          riskInfo += `- Conta "${acc.name}": 
+            Limite Diário: ${acc.dailyRiskLimit ? `$${acc.dailyRiskLimit}` : 'N/A'}
+            Risco p/ Operação: ${acc.riskPerTradeLimit ? `$${acc.riskPerTradeLimit}` : 'N/A'}
+            Op. por Dia: ${acc.maxTradesPerDay || 'N/A'}\n`;
+        });
+      } else {
+        riskInfo += 'Não definido.\n';
+      }
 
       let textPrompt = `
       O usuário está fazendo uma pergunta sobre suas operações.

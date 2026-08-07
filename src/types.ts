@@ -4,6 +4,9 @@ export interface Account {
   id: string;
   name: string;
   initialBalance: number;
+  dailyRiskLimit?: number;
+  riskPerTradeLimit?: number;
+  maxTradesPerDay?: number;
 }
 
 export interface AppSettings {
